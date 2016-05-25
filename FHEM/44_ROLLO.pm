@@ -35,7 +35,7 @@ use warnings;
 use Data::Dumper; #Zum Entwickeln und Debuggen, gibt ganze Arrays im Log aus!
 
 #-- globals on start
-my $version = "1.0beta11";
+my $version = "1.0beta12";
 
 #***** Rolladen-positionen die im klartext auf der Oberflaeche benutzt werden sollen
 # alle Positionen die keinen wert haben (noArg) muessen in dem zweiten Hash mit einer
@@ -59,7 +59,7 @@ my %position = (
   #"meinePosition" => 22,
   "schlitz" => 90);
 
-#***** GET wir f�r Modulinformationen genutzt
+#***** GET wir für Modulinformationen genutzt
 my %gets = (
 #  "write_hash_to_log" => "write");
   "version:noArg"   => "V"
@@ -71,7 +71,7 @@ my %gets = (
 sub ROLLO_Initialize($) {
   my ($hash) = @_;
   my $name = $hash->{NAME};
-  Log3 "global",4,"ROLLO (?) >> Initialize";
+  #Log3 "global",4,"ROLLO (?) >> Initialize";
 
   $hash->{DefFn}    = "ROLLO_Define";
   $hash->{UndefFn}  = "ROLLO_Undef";
@@ -87,7 +87,7 @@ sub ROLLO_Initialize($) {
     . " device kanal1 kanal2 kanal3"
 	. " Zeitaddition_Endanschlag";
  
-  Log3 "global",4,"ROLLO (?) << Initialize";
+  #Log3 "global",4,"ROLLO (?) << Initialize";
 }
 
 ################################################################ DEFINE #####
@@ -97,7 +97,7 @@ sub ROLLO_Initialize($) {
 sub ROLLO_Define($$) {
   my ($hash,$def) = @_;
   my $name = $hash->{NAME};
-  Log3 $name,4,"ROLLO ($name) >> Define";
+  #Log3 $name,4,"ROLLO ($name) >> Define";
 
   my @a = split( "[ \t][ \t]*", $def );
 
@@ -140,7 +140,7 @@ sub ROLLO_Define($$) {
   
   #AssignIoPort($hash);
   #IOWrite schreibt spaeter
-  Log3 $name,4,"ROLLO ($name) << Define";
+  #Log3 $name,4,"ROLLO ($name) << Define";
 }
 
 ################################################################# UNDEF #####
@@ -150,11 +150,11 @@ sub ROLLO_Define($$) {
 sub ROLLO_Undef($) {
   my ($hash) = @_;
   my $name = $hash->{NAME};
-  Log3 $name,4,"ROLLO ($name) >> Undef";
+  #Log3 $name,4,"ROLLO ($name) >> Undef";
 
   RemoveInternalTimer($hash);
 
-  Log3 $name,4,"ROLLO ($name) << Undef";
+  #Log3 $name,4,"ROLLO ($name) << Undef";
 }
 
 #################################################################### SET #####
@@ -165,12 +165,12 @@ sub ROLLO_Undef($) {
 sub ROLLO_Set($@) {
   my ($hash,@a) = @_;
   my $name = $hash->{NAME};
-  Log3 $name,4,"ROLLO ($name) >> Set";
+  #Log3 $name,4,"ROLLO ($name) >> Set";
  
   #FEHLERHAFTE PARAMETER ABFRAGEN
   if ( @a < 2 ) {
     Log3 $name,3,"\"set ROLLO\" needs at least an argument";
-    Log3 $name,4,"ROLLO ($name) << Set";
+    #Log3 $name,4,"ROLLO ($name) << Set";
     return "\"set ROLLO\" needs at least an argument";
   }
   my $opt =  $a[1]; 
@@ -180,7 +180,7 @@ sub ROLLO_Set($@) {
   my $value2 = "";
   $value2 = $a[3] if defined $a[3];
 
-  Log3 $name,5,"ROLLO_Set Befehl=$opt:$value $value2";
+  #Log3 $name,5,"ROLLO_Set Befehl=$opt:$value $value2";
 
   ##### dummy-Modus, nur Status aktualisieren #####
   if ($opt eq "extern") {
@@ -197,7 +197,7 @@ sub ROLLO_Set($@) {
   }  
 
   #moegliche Set Eigenschaften und erlaubte Werte zurueckgeben wenn ein unbekannter
-  #Befehl kommt, dann wird das auch automatisch in die Oberflaecheche �bernommen
+  #Befehl kommt, dann wird das auch automatisch in die Oberflaecheche übernommen
   if(!defined($sets{$opt})) {
     my $param = "";
     foreach my $val (keys %sets) {
@@ -206,7 +206,7 @@ sub ROLLO_Set($@) {
     if ($opt ne "?") {
       Log3 $name,3,"Unknown argument $opt, choose one of $param";
     }
-    Log3 $name,4,"ROLLO ($name) << Set";
+   # Log3 $name,4,"ROLLO ($name) << Set";
     return "Unknown argument $opt, choose one of $param";
   }
 
@@ -229,7 +229,7 @@ sub ROLLO_Set($@) {
 
   #das eigentliche fahren des Rollos uebernimmt diese Funktion:
   ROLLO_Start($hash);
-  Log3 $name,4,"ROLLO ($name) << Set";
+  #Log3 $name,4,"ROLLO ($name) << Set";
 }
 
 #****************************************************************************
@@ -239,7 +239,7 @@ sub ROLLO_Set($@) {
 sub ROLLO_Start($) {
   my ($hash) = @_;
   my $name = $hash->{NAME};
-  Log3 $name,4,"ROLLO ($name) >> Start";
+  #Log3 $name,4,"ROLLO ($name) >> Start";
 
   #***** Auftrag lesen ******#
   my $opt = ReadingsVal($name,"ziel_state","undef");
@@ -285,7 +285,7 @@ sub ROLLO_Start($) {
     if ($opt eq "stop") {
       readingsSingleUpdate($hash,"position", int($pos/10+0.5)*10, 1);
       ROLLO_Stop($hash);
-      Log3 $name,4,"ROLLO ($name) << Start";
+      #Log3 $name,4,"ROLLO ($name) << Start";
       return;
     }
 
@@ -303,7 +303,7 @@ sub ROLLO_Start($) {
       ROLLO_Stop($hash);
       InternalTimer(gettimeofday()+1, "ROLLO_Start", $hash, 0);
 
-      Log3 $name,4,"ROLLO ($name) << Start";
+      #Log3 $name,4,"ROLLO ($name) << Start";
       return;
     }
   }
@@ -374,8 +374,8 @@ sub ROLLO_Start($) {
     } else {
       Log3 $name,1,"FEHLER: Funktionsweise '". AttrVal($name,"funktionsweise","Typ1") ."' unbekannt!";
     }
-    Log3 $name,3,"ROLLO sendet: $befehl1";
-    Log3 $name,3,"ROLLO sendet: $befehl2";
+    Log3 $name,3,"ROLLO sendet befehl1: $befehl1";
+    Log3 $name,3,"ROLLO sendet befehl2: $befehl2";
     my $wert = ($ab eq "on")? "drive-down" : "drive-up";
     readingsSingleUpdate($hash,"letzte_fahrt",$wert,1); 
 
@@ -391,7 +391,7 @@ sub ROLLO_Start($) {
       fhem("$befehl1"); 
       fhem("$befehl2") if ($befehl2 ne ""); 
       readingsSingleUpdate($hash,"extern","no",0);
-      Log3 $name,5,"Befehl1: $befehl1 \nBefehl2: $befehl2";
+      #Log3 $name,5,"Befehl1: $befehl1 \nBefehl2: $befehl2";
     } else {
     Log3 $name,5,"Befehle nicht ausgefuehrt da extern getriggert: $befehl1 \nBefehl2: $befehl2";
     }
@@ -410,7 +410,7 @@ sub ROLLO_Start($) {
   InternalTimer(gettimeofday()+$time, "ROLLO_Stop", $hash, 1);
   Log3 $name,5,"Rollo wird gestoppt in $time sekunden.";
 
-  Log3 $name,4,"ROLLO ($name) << Start";
+  #Log3 $name,4,"ROLLO ($name) << Start";
 }
 
 #****************************************************************************
@@ -418,7 +418,7 @@ sub ROLLO_Start($) {
 sub ROLLO_Stop($) {
   my ($hash) = @_;
   my $name = $hash->{NAME};
-  Log3 $name,4,"ROLLO ($name) >> Stop";
+  #Log3 $name,4,"ROLLO ($name) >> Stop";
   my $richtung = ReadingsVal($name,"state","undef");
   my $device = AttrVal($name,"device","");
   my $kanal1 = AttrVal($name,"kanal1","");
@@ -476,9 +476,9 @@ sub ROLLO_Stop($) {
      if ($richtung eq "drive-down") {
       fhem("set $device $kanal1 off");
       Log3 $name,5,"Rollo gestoppt: set $device $kanal1 off";
-     } else {
-   #   fhem("set $device $kanal1 on");
-   #   Log3 $name,5,"Rollo gestoppt: set $device $kanal1 on";
+     } elsif ($richtung eq "drive-up") {
+      fhem("set $device $kanal1 on");
+      Log3 $name,5,"Rollo gestoppt: set $device $kanal1 on";
      }
    #========== Typ 4 =================================================#
    } elsif ($typ eq "Typ4") {
@@ -502,14 +502,14 @@ sub ROLLO_Stop($) {
      Log3 $name,1,"Funktionsweise unbekannt: $typ";
    }
 
-  Log3 $name,4,"ROLLO ($name) << Stop";
+  #log3 $name,4,"ROLLO ($name) << Stop";
 }
 
 #****************************************************************************
 #* Sekunden berechnen wie lange der Rolladen fahren soll
 sub calculateDriveTime(@) {
   my ($name,$alt,$neu,$ab) = @_; 
-  Log3 $name,4,"ROLLO ($name) >> calculateDriveTime";
+  #Log3 $name,4,"ROLLO ($name) >> calculateDriveTime";
   my ($zeit, $schritte);
   if ($ab eq "on") {
     $zeit = AttrVal($name,'drive-down-time-to-100',undef);
@@ -520,17 +520,17 @@ sub calculateDriveTime(@) {
   }
   if ($schritte == 0) {
     Log3 $name,3,"Position start + ziel sind identisch";
-    Log3 $name,4,"ROLLO ($name) << calculateDriveTime";
+    #Log3 $name,4,"ROLLO ($name) << calculateDriveTime";
     return 0;
   }
   if(!defined($zeit)) {
     Log3 $name,3,"ROLLO FEHLER: Attribute drive-??-time-to-100 nicht gesetzt!";
-    Log3 $name,4,"ROLLO ($name) << calculateDriveTime";
+    #Log3 $name,4,"ROLLO ($name) << calculateDriveTime";
     return 30;
   }
   my $Fahrzeit = $zeit*$schritte/100;
   Log3 $name,5,"Parameter: Position=$alt,Ziel=$neu,Abwaerts=$ab,FahrzeitGesamt=$zeit,Schritte=$schritte,FahrzeitBerechnet=$Fahrzeit";
-  Log3 $name,4,"ROLLO ($name) << calculateDriveTime";
+  #Log3 $name,4,"ROLLO ($name) << calculateDriveTime";
   return $Fahrzeit;
 }
 
@@ -539,7 +539,7 @@ sub calculateDriveTime(@) {
 sub ROLLO_Get($@) {
   my ($hash, @a) = @_;
   my $name = $hash->{NAME};
-  Log3 $name,4,"ROLLO ($name) >> Get";
+  #Log3 $name,4,"ROLLO ($name) >> Get";
 
   #-- get version
   if( $a[1] eq "version") {
@@ -574,14 +574,14 @@ sub ROLLO_Get($@) {
 #    Log3 $name,1,"----- Write Hash to Log END -------"
 #  }
 
-  Log3 $name,4,"ROLLO ($name) << Get";
+  #Log3 $name,4,"ROLLO ($name) << Get";
 }
 
 ################################################################## ATTR #####
 #
 sub ROLLO_Attr(@) {
   my ($cmd,$name,$aName,$aVal) = @_;
-  Log3 $name,4,"ROLLO ($name) >> Attr";  
+  #Log3 $name,4,"ROLLO ($name) >> Attr";  
   # $cmd can be "del" or "set"
   # aName and aVal are Attribute name and value
   if ($cmd eq "set") {
@@ -593,7 +593,7 @@ sub ROLLO_Attr(@) {
       }
     }
   }
-  Log3 $name,4,"ROLLO ($name) << Attr";
+  #Log3 $name,4,"ROLLO ($name) << Attr";
   return undef;
 }
 
