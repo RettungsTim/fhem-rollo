@@ -13,7 +13,7 @@ use strict;
 use warnings;
 use Data::Dumper;
 
-my $version = "1.100"
+my $version = "1.101";
 
 my %sets = (
   "open" => "noArg",
@@ -182,7 +182,7 @@ sub ROLLO_Start($) {
   my $position = ReadingsVal($name,"position",0);
   my $state = ReadingsVal($name,"state","open");
 
-  Log3 $name,4,"$name drive from $position to $desired_position. command: $command. state: $state";
+  Log3 $name,4,"ROLLO_Start: $name drive from $position to $desired_position. command: $command. state: $state";
 
   if(ReadingsVal($name,"blocked","0") eq "1" && $command ne "stop")
   {
@@ -319,7 +319,7 @@ sub ROLLO_Stop($) {
   my $position = ReadingsVal($name,"position",0);
   my $state = ReadingsVal($name,"state","");
 
-  Log3 $name,4,"stops from $state at position $position";
+  Log3 $name,4,"ROLLO_Stop: stops from $state at position $position";
 
   if( ($state =~ /drive-/ && $position > 0 && $position < 100 ) || AttrVal($name, "autoStop", 0) ne 1)
   {
@@ -366,7 +366,7 @@ sub ROLLO_calculatePosition(@) {
   Log3 $name,4,"calculate position for $name";
 
   my $start = ReadingsVal($name,"position",100);
-  my $end   = ReadingsVal($name,"desired-position",0);
+  my $end   = ReadingsVal($name,"desired_position",0);
   my $drivetime_rest  = int($hash->{stoptime}-gettimeofday()); #die noch zu fahrenden Sekunden
   my $drivetime_total = ($start < $end) ? AttrVal($name,'secondsDown',undef) : AttrVal($name,'secondsUp',undef);
 
@@ -380,8 +380,10 @@ sub ROLLO_calculatePosition(@) {
   $drivetime_rest -= AttrVal($name,'excessTop',0) if($end == 0);
   $drivetime_rest -= AttrVal($name,'excessBottom',0) if($end == 100);
   #wenn ich schon in der nachlaufzeit war, setze ich die Position auf 99, dann kann man nochmal für die nachlaufzeit starten
-  if ($drivetime_rest <= 0) {
+  if ($drivetime_rest < 0) {
      $position = ($start < $end) ? 99 : 1;
+  } elsif ($start == $end) {
+	 $position = $end;
   } else {
     $position = $drivetime_rest/$drivetime_total*100;
     $position = ($start < $end) ? $end-$position : $end+$position;
