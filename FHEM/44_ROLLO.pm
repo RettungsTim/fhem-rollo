@@ -1,6 +1,10 @@
 ############################################################
-# $Id: 44_ROLLO.pm 1100 2016-03-11 20:00:00Z Thomas Ramm $ #
+# $Id: 44_ROLLO.pm 1100 2016-06-08 20:00:00Z             $ #
 # Modul zur einfacheren Rolladensteuerung
+#
+# Thomas Ramm, 2016
+# Tim Horenkamp, 2016
+#
 ############################################################
 
 package main;
@@ -8,6 +12,8 @@ package main;
 use strict;
 use warnings;
 use Data::Dumper;
+
+my $version = "1.100"
 
 my %sets = (
   "open" => "noArg",
@@ -26,6 +32,7 @@ my %positions = (
   "half" => 50);
 
 my %gets = (
+   "version:noArg" => "V"
   );
 
 ############################################################ INITIALIZE #####
@@ -424,6 +431,10 @@ sub ROLLO_Get($@) {
   my ($hash, @a) = @_;
   my $name = $hash->{NAME};
 
+  #-- get version
+  if( $a[1] eq "version") {
+    return "$name.version => $version";
+  }
   if ( @a < 2 ) {
     Log3 $name,3, "\"get ROLLO\" needs at least one argument";
     return "\"get ROLLO\" needs at least one argument";
