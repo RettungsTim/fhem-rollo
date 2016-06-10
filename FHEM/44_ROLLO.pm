@@ -143,7 +143,8 @@ sub ROLLO_Set($@) {
   {
     Log3 $name,1,"FEHLER: WARUM BIN ICH HIER?";
     RemoveInternalTimer($hash);
-    ROLLO_Stop($hash);
+    Log3 $name,3,"Stopaufruf 1";
+	ROLLO_Stop($hash);
     return undef;
   } elsif ($cmd eq "extern") {
     readingsSingleUpdate($hash,"extern","extern",0);
@@ -156,10 +157,12 @@ sub ROLLO_Set($@) {
     readingsEndUpdate($hash,1);
     return undef;
   } elsif ($cmd eq "blocked") {
+	Log3 $name,3,"Stopaufruf 2";
     ROLLO_Stop($hash);
     readingsSingleUpdate($hash,"blocked","1",1);
     return if(AttrVal($name,"blockMode","none") eq "blocked");
   } elsif ($cmd eq "unblocked") {
+  	Log3 $name,3,"Stopaufruf 3";
     ROLLO_Stop($hash);
     readingsSingleUpdate($hash,"blocked","0",1);
     ROLLO_Start($hash);
@@ -255,12 +258,14 @@ sub ROLLO_Start($) {
   #Ich fahre ja gerade...wo bin ich aktuell?
   if ($state =~ /drive-/)
   {
-    $position = ROLLO_calculatePosition($hash,$name);
+
+		$position = ROLLO_calculatePosition($hash,$name);
 
     if ($command eq "stop")
     {
       #readingsSingleUpdate($hash,"position",$position,0);
-      ROLLO_Stop($hash);
+      Log3 $name,3,"Stopaufruf 4";
+	  ROLLO_Stop($hash);
       return;
     }
 
@@ -269,12 +274,14 @@ sub ROLLO_Start($) {
     if ( (($state eq "drive-down") && ($direction eq "up")) || (($state eq "drive-up") && ($direction eq "down")) )
     {
       Log3 $name,2,"wrong direction";
-
+	Log3 $name,3,"Stopaufruf 5";
       ROLLO_Stop($hash);
       InternalTimer(int(gettimeofday())+AttrVal($name,'resetTime',0) , "ROLLO_Start", $hash, 0);
       return;
     }
   }
+
+  
   RemoveInternalTimer($hash);
   my $time = ROLLO_calculateDriveTime($name,$position,$desired_position,$direction);
   if ($time > 0)
@@ -320,6 +327,7 @@ sub ROLLO_Timer($) {
   Log3 $name,5,"ROLLO ($name) >> Timer abgelaufen";
   my $position = ReadingsVal($name,"desired_position",0);
   readingsSingleUpdate($hash,"position",$position,0);
+  Log3 $name,3,"Stopaufruf 6";
   ROLLO_Stop($hash);
   return undef;
 }
@@ -408,7 +416,7 @@ sub ROLLO_calculatePosition(@) {
   }
   Log3 $name,4,"calculated Position is $position";
   #aktuelle Position aktualisieren und zurückgeben
-  readingsSingleUpdate($hash,"position",$position,1);
+  readingsSingleUpdate($hash,"position",$position,100);
   return $position;
 }
 #****************************************************************************
@@ -496,3 +504,236 @@ sub ROLLO_Attr(@) {
 }
 
 1;
+
+
+=pod
+=begin html
+
+<a name="ROLLOneu"></a>
+<h3>ROLLOneu</h3>
+<p>The module SHADE offers easy away to steer the shutter with one or two relays and to stop point-exactly. <br> 
+			Moreover, the topical position is illustrated in fhem. About which hardware the exits are appealed, besides, makes no difference. <br />
+			<h4>Example</h4>
+			<p>
+				<code>define TestRollo ROLLOneu</code>
+				<br />
+			</p><a name="ROLLOneu_Define"></a>
+			<h4>Define</h4>
+			<p>
+				<code>define &lt;Rollo-Device&gt; ROLLOneu</code> 
+				<br /><br /> Define a ROLLOneu instance.<br />
+			</p>
+			 <a name="ROLLOneu_Set"></a>
+	 <h4>Set</h4>
+			<ul>
+				<li><a name="rollo_open">
+						<code>set &lt;Rollo-Device&gt; open</code></a><br />
+						Faehrt das Rollo komplett auf (Position 0) </li>
+				<li><a name="rollo_closed">
+						<code>set &lt;Rollo-Device&gt; closed</code></a><br />
+						Faehrt das Rollo komplett zu (Position 100) </li>		
+				<li><a name="rollo_half">
+						<code>set &lt;Rollo-Device&gt; half</code></a><br />
+						Faehrt das Rollo zur haelfte runter bzw. hoch (Position 50) </li>						
+				<li><a name="rollo_stop">
+						<code>set &lt;Rollo-Device&gt; stop</code></a><br />
+						Stoppt das Rollo</li>						
+				<li><a name="rollo_blocked">
+						<code>set &lt;Rollo-Device&gt; blocked</code></a><br />
+						Erklaerung folgt</li>
+				<li><a name="rollo_unblocked">
+						<code>set &lt;Rollo-Device&gt; unblocked</code></a><br />
+						Erklaerung folgt</li>
+				<li><a name="rollo_position">
+						<code>set &lt;Rollo-Device&gt; position &lt;value&gt;</code></a><br />
+						Faehrt das Rollo auf eine beliebige Position zwischen 0 (offen) - 100 (geschlossen) </li> 
+				<li><a name="rollo_reset">
+						<code>set &lt;Rollo-Device&gt; reset &lt;value&gt;</code></a><br />
+						Sagt dem Modul in welcher Position sich der Rollo befindet</li> 
+				<li><a name="rollo_extern">
+						<code>set &lt;Rollo-Device&gt; extern &lt;value&gt;</code></a><br />
+						Der Software mitteilen das gerade Befehl X bereits ausgeführt wurde und nun z.B,. das berechnen der aktuellen Position gestartet werden soll</li> 
+			</ul>
+			<a name="ROLLOneu_Get"></a>
+			<h4>Get</h4>
+			<ul>
+				<li><a name="rollo_version">
+						<code>get &lt;Rollo-Device&gt; version</code></a>
+					<br /> Returns the version number of the FHEM ROLLOneu module</li>
+			</ul>
+			<h4>Attributes</h4>
+			<ul>
+				<li><a name="rollo_secondsDown"><code>attr &lt;Rollo-Device&gt; secondsDown
+							&lt;string&gt;</code></a>
+					<br />Sekunden zum hochfahren</li>
+				<li><a name="rollo_secondsUp"><code>attr &lt;Rollo-Device&gt; secondsUp
+							&lt;string&gt;</code></a>
+					<br />Sekunden zum herunterfahren</li>
+				<li><a name="rollo_excessTop"><code>attr &lt;Rollo-Device&gt; excessTop
+							&lt;string&gt;</code></a>
+					<br />Zeit die mein Rollo Fahren muss ohne das sich die Rollo-Position ändert (bei mir fährt der Rollo noch in die Wand, ohne das man es am Fenster sieht, die Position ist also schon bei 0%)</li>
+				<li><a name="rollo_excessBottom"><code>attr &lt;Rollo-Device&gt; excessBottom
+							&lt;string&gt;</code></a>
+					<br />(siehe excessTop)</li>
+				<li><a name="rollo_resetTime"><code>attr &lt;Rollo-Device&gt; resetTime
+							&lt;string&gt;</code></a>
+					<br />Zeit die zwischen 2 gegensätzlichen Laufbefehlen pausiert werden soll, also wenn der Rollo z.B. gerade runter fährt und ich den Befehl gebe hoch zu fahren, dann soll 1 sekunde gewartet werden bis der Motor wirklich zum stillstand kommt, bevor es wieder in die andere Richtung weiter geht. Dies ist die einzige Zeit die nichts mit der eigentlichen Laufzeit des Motors zu tun hat, sondern ein timer zwischen den Laufzeiten.</li>
+				<li><a name="rollo_reactionTime"><code>attr &lt;Rollo-Device&gt; reactionTime
+							&lt;string&gt;</code></a> 
+					<br />Zeit für den Motor zum reagieren</li>
+				<li><a name="rollo_commandUp"><code>attr &lt;Rollo-Device&gt; commandUp
+							&lt;string&gt;</code></a>
+					<br />Es werden bis zu 3 beliebige Befehle zum hochfahren ausgeführt</li>
+				<li><a name="rollo_commandDown"><code>attr &lt;Rollo-Device&gt; commandDown
+							&lt;string&gt;</code></a>
+					<br />Es werden bis zu 3 beliebige Befehle zum runterfahren ausgeführt</li>					
+				<li><a name="rollo_commandStop"><code>attr &lt;Rollo-Device&gt; commandStop
+							&lt;string&gt;</code></a>
+					<br />Befehl der zum Stoppen ausgeführt wird, sofern nicht commandStopDown bzw. commandStopUp definiert sind</li>					
+				<li><a name="rollo_commandStopDown"><code>attr &lt;Rollo-Device&gt; commandStopDown
+							&lt;string&gt;</code></a>
+					<br />Befehl der zum stoppen ausgeführt wird, wenn der Rollo gerade herunterfährt. Wenn nicht definiert wird commandStop ausgeführt</li>					
+				<li><a name="rollo_commandStopUp"><code>attr &lt;Rollo-Device&gt; commandStopUp
+							&lt;string&gt;</code></a>
+					<br />Befehl der zum Stoppen ausgeführt wird,wenn der Rollo gerade hochfährt. Wenn nicht definiert wird commandStop ausgeführt</li>
+				<li><a name="rollo_blockMode"><code>attr &lt;Rollo-Device&gt; blockMode
+							 [blocked|force-open|force-closed|only-up|only-down|half-up|half-down|none]</code></a>
+					<br />wenn ich den Befehl blocked ausführe, dann wird aufgrund der blockMode-Art festgelegt wie mein Rollo reagieren soll:<br>
+							blocked = Rollo lässt sich nicht mehr bewegen<br>
+							force-open = bei einem beliebigen Fahrbefehl wird Rollo hochgefahren<br>
+							force-closed = bei einem beliebigen Fahrbefehl wird Rollo runtergefahren<br>
+							only-up = Befehle zum runterfahren werden ignoriert<br>
+							only-down = Befehle zum hochfahren werden ignoriert<br>
+							half-up = es werden nur die Positionen 50-100 angefahren, bei Position <50 wird Position 50% angefahren,<br>
+							half-down = es werden nur die Positionen 0-50 angefahren, bei Position >50 wird Position 50 angefahren<br>
+							none = block-Modus ist deaktiviert</li>
+				<li><a name="rollo_automatic-enabled"><code>attr &lt;Rollo-Device&gt; automatic-enabled
+							&lt;string&gt;]</code></a>
+					<br />Wenn auf off gestellt, haben Befehle über Modul ROLLOneu_Automatic keine Auswirkungen auf diesen Rollo</li>
+				<li><a name="rollo_automatic-delay"><code>attr &lt;Rollo-Device&gt; automatic-delay
+							&lt;string&gt;</code></a>
+					<br />Dieses Attribut wird nur fuer die Modulerweiterung ROLLADEN_Automatic benoetigt.<br>
+					Hiermit kann einge Zeitverzoegerund fuer den Rolladen eingestellt werden, werden die Rolladen per Automatic heruntergefahren, so wird dieser um die angegebenen minuten spaeter heruntergefahren. 
+					</li>
+				<li><a name="rollo_Zeitaddition_Endanschlag"><code>attr &lt;Rollo-Device&gt; Zeitaddition_Endanschlag
+							&lt;string&gt;</code></a>
+					<br />Zeit in Sekunden, fuer die zeit die drauf gegeben werden soll um sicher zu sein das das Rollo wirklich am Ende ankommt falls die Zeiten zu knapp hinterlegt sind.</li>
+				<li><a href="#readingFnAttributes">readingFnAttributes</a></li>
+			</ul>
+=end html
+
+=begin html_DE
+
+<a name="ROLLOneu"></a>
+<h3>ROLLOneu</h3>
+			<p>Das Modul ROLLOneu bietet eine einfache Moeglichkeit, mit ein bis zwei Relais den Hoch-/Runterlauf eines Rolladen zu steuern und punktgenau anzuhalten.<br> 
+			Ausserdem wird die aktuelle Position in fhem abgebildet. Ueber welche Hardware/Module die Ausgaenge angesprochen werden ist dabei egal.<br /><h4>Example</h4>
+			<p>
+				<code>define TestRollo ROLLOneu</code>
+				<br />
+			</p><a name="ROLLOneu_Define"></a>
+			<h4>Define</h4>
+			<p>
+				<code>define &lt;Rollo-Device&gt; ROLLOneu</code> 
+				<br /><br /> Defination eines Rollos.<br />
+			</p>
+			 <a name="ROLLOneu_Set"></a>
+	 <h4>Set</h4>
+			<ul>
+				<li><a name="rollo_open">
+						<code>set &lt;Rollo-Device&gt; open</code></a><br />
+						Faehrt das Rollo komplett auf (Position 0) </li>
+				<li><a name="rollo_closed">
+						<code>set &lt;Rollo-Device&gt; closed</code></a><br />
+						Faehrt das Rollo komplett zu (Position 100) </li>		
+				<li><a name="rollo_half">
+						<code>set &lt;Rollo-Device&gt; half</code></a><br />
+						Faehrt das Rollo zur haelfte runter bzw. hoch (Position 50) </li>						
+				<li><a name="rollo_stop">
+						<code>set &lt;Rollo-Device&gt; stop</code></a><br />
+						Stoppt das Rollo</li>						
+				<li><a name="rollo_blocked">
+						<code>set &lt;Rollo-Device&gt; blocked</code></a><br />
+						Erklaerung folgt</li>
+				<li><a name="rollo_unblocked">
+						<code>set &lt;Rollo-Device&gt; unblocked</code></a><br />
+						Erklaerung folgt</li>
+				<li><a name="rollo_position">
+						<code>set &lt;Rollo-Device&gt; position &lt;value&gt;</code></a><br />
+						Faehrt das Rollo auf eine beliebige Position zwischen 0 (offen) - 100 (geschlossen) </li> 
+				<li><a name="rollo_reset">
+						<code>set &lt;Rollo-Device&gt; reset &lt;value&gt;</code></a><br />
+						Sagt dem Modul in welcher Position sich der Rollo befindet</li> 
+				<li><a name="rollo_extern">
+						<code>set &lt;Rollo-Device&gt; extern &lt;value&gt;</code></a><br />
+						Der Software mitteilen das gerade Befehl X bereits ausgeführt wurde und nun z.B,. das berechnen der aktuellen Position gestartet werden soll</li> 
+			</ul>
+			<a name="ROLLOneu_Get"></a>
+			<h4>Get</h4>
+			<ul>
+				<li><a name="rollo_version">
+						<code>get &lt;Rollo-Device&gt; version</code></a>
+					<br />Gibt die version des Modul Rollos aus</li>
+			</ul>
+			<h4>Attributes</h4>
+			<ul>
+				<li><a name="rollo_secondsDown"><code>attr &lt;Rollo-Device&gt; secondsDown
+							&lt;string&gt;</code></a>
+					<br />Sekunden zum hochfahren</li>
+				<li><a name="rollo_secondsUp"><code>attr &lt;Rollo-Device&gt; secondsUp
+							&lt;string&gt;</code></a>
+					<br />Sekunden zum herunterfahren</li>
+				<li><a name="rollo_excessTop"><code>attr &lt;Rollo-Device&gt; excessTop
+							&lt;string&gt;</code></a>
+					<br />Zeit die mein Rollo Fahren muss ohne das sich die Rollo-Position ändert (bei mir fährt der Rollo noch in die Wand, ohne das man es am Fenster sieht, die Position ist also schon bei 0%)</li>
+				<li><a name="rollo_excessBottom"><code>attr &lt;Rollo-Device&gt; excessBottom
+							&lt;string&gt;</code></a>
+					<br />(siehe excessTop)</li>
+				<li><a name="rollo_resetTime"><code>attr &lt;Rollo-Device&gt; resetTime
+							&lt;string&gt;</code></a>
+					<br />Zeit die zwischen 2 gegensätzlichen Laufbefehlen pausiert werden soll, also wenn der Rollo z.B. gerade runter fährt und ich den Befehl gebe hoch zu fahren, dann soll 1 sekunde gewartet werden bis der Motor wirklich zum stillstand kommt, bevor es wieder in die andere Richtung weiter geht. Dies ist die einzige Zeit die nichts mit der eigentlichen Laufzeit des Motors zu tun hat, sondern ein timer zwischen den Laufzeiten.</li>
+				<li><a name="rollo_reactionTime"><code>attr &lt;Rollo-Device&gt; reactionTime
+							&lt;string&gt;</code></a> 
+					<br />Zeit für den Motor zum reagieren</li>
+				<li><a name="rollo_commandUp"><code>attr &lt;Rollo-Device&gt; commandUp
+							&lt;string&gt;</code></a>
+					<br />Es werden bis zu 3 beliebige Befehle zum hochfahren ausgeführt</li>
+				<li><a name="rollo_commandDown"><code>attr &lt;Rollo-Device&gt; commandDown
+							&lt;string&gt;</code></a>
+					<br />Es werden bis zu 3 beliebige Befehle zum runterfahren ausgeführt</li>					
+				<li><a name="rollo_commandStop"><code>attr &lt;Rollo-Device&gt; commandStop
+							&lt;string&gt;</code></a>
+					<br />Befehl der zum Stoppen ausgeführt wird, sofern nicht commandStopDown bzw. commandStopUp definiert sind</li>					
+				<li><a name="rollo_commandStopDown"><code>attr &lt;Rollo-Device&gt; commandStopDown
+							&lt;string&gt;</code></a>
+					<br />Befehl der zum stoppen ausgeführt wird, wenn der Rollo gerade herunterfährt. Wenn nicht definiert wird commandStop ausgeführt</li>					
+				<li><a name="rollo_commandStopUp"><code>attr &lt;Rollo-Device&gt; commandStopUp
+							&lt;string&gt;</code></a>
+					<br />Befehl der zum Stoppen ausgeführt wird,wenn der Rollo gerade hochfährt. Wenn nicht definiert wird commandStop ausgeführt</li>
+				<li><a name="rollo_blockMode"><code>attr &lt;Rollo-Device&gt; blockMode
+							 [blocked|force-open|force-closed|only-up|only-down|half-up|half-down|none]</code></a>
+					<br />wenn ich den Befehl blocked ausführe, dann wird aufgrund der blockMode-Art festgelegt wie mein Rollo reagieren soll:<br>
+							blocked = Rollo lässt sich nicht mehr bewegen<br>
+							force-open = bei einem beliebigen Fahrbefehl wird Rollo hochgefahren<br>
+							force-closed = bei einem beliebigen Fahrbefehl wird Rollo runtergefahren<br>
+							only-up = Befehle zum runterfahren werden ignoriert<br>
+							only-down = Befehle zum hochfahren werden ignoriert<br>
+							half-up = es werden nur die Positionen 50-100 angefahren, bei Position <50 wird Position 50% angefahren,<br>
+							half-down = es werden nur die Positionen 0-50 angefahren, bei Position >50 wird Position 50 angefahren<br>
+							none = block-Modus ist deaktiviert</li>
+				<li><a name="rollo_automatic-enabled"><code>attr &lt;Rollo-Device&gt; automatic-enabled
+							&lt;string&gt;]</code></a>
+					<br />Wenn auf off gestellt, haben Befehle über Modul ROLLOneu_Automatic keine Auswirkungen auf diesen Rollo</li>
+				<li><a name="rollo_automatic-delay"><code>attr &lt;Rollo-Device&gt; automatic-delay
+							&lt;string&gt;</code></a>
+					<br />Dieses Attribut wird nur fuer die Modulerweiterung ROLLADEN_Automatic benoetigt.<br>
+					Hiermit kann einge Zeitverzoegerund fuer den Rolladen eingestellt werden, werden die Rolladen per Automatic heruntergefahren, so wird dieser um die angegebenen minuten spaeter heruntergefahren. 
+					</li>
+				<li><a name="rollo_Zeitaddition_Endanschlag"><code>attr &lt;Rollo-Device&gt; Zeitaddition_Endanschlag
+							&lt;string&gt;</code></a>
+					<br />Zeit in Sekunden, fuer die zeit die drauf gegeben werden soll um sicher zu sein das das Rollo wirklich am Ende ankommt falls die Zeiten zu knapp hinterlegt sind.</li>
+				<li><a href="#readingFnAttributes">readingFnAttributes</a></li>
+			</ul>
+
+=end html_DE
+=cut
