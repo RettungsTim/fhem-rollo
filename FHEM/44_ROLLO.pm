@@ -296,10 +296,16 @@ sub ROLLO_Start($) {
       $command2 = AttrVal($name,'commandUp2',"");
       $command3 = AttrVal($name,'commandUp3',"");
     }
-    Log3 $name,4,"ROLLO sends: $command1   $command2   $command3";
-
+	
+	$command = "drive-" . $direction;
+    readingsBeginUpdate($hash);
+    readingsBulkUpdate($hash,"last_drive",$command);
+    readingsBulkUpdate($hash,"state",$command);
+    readingsEndUpdate($hash,1);
+	
     #***** ROLLO NICHT LOSFAHREN WENN SCHON EXTERN GESTARTET *****#
     if (ReadingsVal($name,"extern","undef") ne "extern") {
+	  Log3 $name,4,"ROLLO sends: $command1   $command2   $command3";
       fhem("$command1") if ($command1 ne "");
       fhem("$command2") if ($command2 ne "");
       fhem("$command3") if ($command3 ne "");
@@ -312,11 +318,7 @@ sub ROLLO_Start($) {
     InternalTimer($hash->{stoptime}, "ROLLO_Timer", $hash, 1);
     Log3 $name,5,"stops in $time seconds.";
 
-    $command = "drive-" . $direction;
-    readingsBeginUpdate($hash);
-    readingsBulkUpdate($hash,"last_drive",$command);
-    readingsBulkUpdate($hash,"state",$command);
-    readingsEndUpdate($hash,1);
+
   }
   Log3 $name,5,"ROLLO ($name) << Start";
   return undef;

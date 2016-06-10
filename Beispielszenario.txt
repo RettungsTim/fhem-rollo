@@ -1,0 +1,53 @@
+define dummyRollo ROLLO
+attr dummyRollo commandDown set dummy2 on
+attr dummyRollo commandStop set dummy1,dummy2 off
+attr dummyRollo commandUp set dummy1 on
+attr dummyRollo devStateIcon open:fts_shutter_10:closed closed:fts_shutter_100:open schlitz:fts_shutter_80:closed drive-up:fts_shutter_up@red:stop drive-down:fts_shutter_down@red:stop position-100:fts_shutter_100:open position-90:fts_shutter_80:closed position-80:fts_shutter_80:closed position-70:fts_shutter_70:closed position-60:fts_shutter_60:closed position-50:fts_shutter_50:closed position-40:fts_shutter_40:open position-30:fts_shutter_30:open position-20:fts_shutter_20:open position-10:fts_shutter_10:open position-0:fts_shutter_10:closed
+attr dummyRollo excessBottom 2
+attr dummyRollo excessTop 4
+attr dummyRollo resetTime 1
+attr dummyRollo room Entwicklung
+attr dummyRollo secondsDown 30
+attr dummyRollo secondsUp 30
+attr dummyRollo verbose 5
+attr dummyRollo webCmd open:closed:half:stop:position
+define TestRollo_RUNTER dummy
+attr TestRollo_RUNTER room Test
+attr TestRollo_RUNTER webCmd on:off
+define TestRollo_HOCH dummy
+attr TestRollo_HOCH room Test
+attr TestRollo_HOCH webCmd on:off
+define TestRollo_manuell_auf DOIF ([TestRollo_HOCH] eq "on" and [TestRollo_RUNTER] eq "on" and [TestRollo] ne "drive-up") \
+   (set TestRollo_RUNTER off) \
+DOELSEIF ([TestRollo_HOCH:"on"] and [TestRollo] ne "drive-up") \
+   (set TestRollo extern open) \
+DOELSEIF ([TestRollo_HOCH:"off"] and [TestRollo] eq "drive-up") \
+   (set TestRollo extern stop)
+attr TestRollo_manuell_auf disable 0
+attr TestRollo_manuell_auf do always
+attr TestRollo_manuell_auf room Test
+define TestRollo_manuell_ab DOIF ([TestRollo_HOCH] eq "on" and [TestRollo_RUNTER] eq "on" and [TestRollo] ne "drive-down") \
+     (set TestRollo_HOCH off) \
+DOELSEIF ([TestRollo_RUNTER:"on"] and [TestRollo] ne "drive-down") \
+     (set TestRollo extern closed) \
+DOELSEIF ([TestRollo_RUNTER:"off"] and [TestRollo] eq "drive-down") \
+     (set TestRollo extern stop)
+attr TestRollo_manuell_ab disable 0
+attr TestRollo_manuell_ab do always
+attr TestRollo_manuell_ab room Test
+define TestRollo ROLLO
+attr TestRollo commandDown set TestRollo_RUNTER on
+attr TestRollo commandDown2 set TestRollo_HOCH off
+attr TestRollo commandStopDown set TestRollo_RUNTER off
+attr TestRollo commandStopUp set TestRollo_HOCH off
+attr TestRollo commandUp set TestRollo_HOCH on
+attr TestRollo commandUp2 set TestRollo_RUNTER off
+attr TestRollo devStateIcon open:fts_shutter_10:closed closed:fts_shutter_100:open schlitz:fts_shutter_80:closed drive-up:fts_shutter_up@red:stop drive-down:fts_shutter_down@red:stop position-100:fts_shutter_100:open position-90:fts_shutter_80:closed position-80:fts_shutter_80:closed position-70:fts_shutter_70:closed position-60:fts_shutter_60:closed position-50:fts_shutter_50:closed position-40:fts_shutter_40:open position-30:fts_shutter_30:open position-20:fts_shutter_20:open position-10:fts_shutter_10:open position-0:fts_shutter_10:closed
+attr TestRollo excessBottom 0
+attr TestRollo excessTop 0
+attr TestRollo resetTime 1
+attr TestRollo room Test
+attr TestRollo secondsDown 10
+attr TestRollo secondsUp 10
+attr TestRollo verbose 5
+attr TestRollo webCmd open:closed:half:stop:position
