@@ -406,17 +406,17 @@ sub ROLLO_calculatePosition(@) {
   $drivetime_rest -= AttrVal($name,'excessTop',0) if($end == 0);
   $drivetime_rest -= AttrVal($name,'excessBottom',0) if($end == 100);
   #wenn ich schon in der nachlaufzeit war, setze ich die Position auf 99, dann kann man nochmal für die nachlaufzeit starten
-  if ($drivetime_rest < 0) {
-     $position = ($start < $end) ? 99 : 1;
-  } elsif ($start == $end) {
+  if ($start == $end) {
 	 $position = $end;
+  } elsif ($drivetime_rest < 0) {
+     $position = ($start < $end) ? 99 : 1;
   } else {
     $position = $drivetime_rest/$drivetime_total*100;
     $position = ($start < $end) ? $end-$position : $end+$position;
     $position = 0 if($position < 0);
     $position = 100 if($position > 100);
   }
-  Log3 $name,4,"calculated Position is $position";
+  Log3 $name,4,"calculated Position is $position (drivetime_rest is $drivetime_rest)";
   #aktuelle Position aktualisieren und zurückgeben
   readingsSingleUpdate($hash,"position",$position,100);
   return $position;
