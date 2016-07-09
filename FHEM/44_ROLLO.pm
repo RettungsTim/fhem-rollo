@@ -120,7 +120,7 @@ sub ROLLO_Set($@) {
   my ($hash,@a) = @_;
   my $name = $hash->{NAME};
 
-#allgemeine Fehler in der Parameterübergabe abfangen
+  #allgemeine Fehler in der Parameterübergabe abfangen
   if ( @a < 2 ) {
     Log3 $name,3,"\"set ROLLO\" needs at least one argument";
     return "\"ROLLO_Set\" needs at least one argument";
@@ -129,7 +129,7 @@ sub ROLLO_Set($@) {
   my $arg = "";
   $arg = $a[2] if defined $a[2];
 
-  Log3 $name,4,"ROLLO_Set $cmd:$arg";
+  Log3 $name,4,"ROLLO_Set $cmd:$arg" if ($cmd ne "?");
 
   my @positionsets = ("0","10","20","30","40","50","60","70","80","90","100");
 
