@@ -1,10 +1,11 @@
-############################################################
-# $Id: 44_ROLLO.pm 1100 2016-06-08 20:00:00Z             $ #
-# Modul zur einfacheren Rolladensteuerung
-#
-# Thomas Ramm, 2016
-# Tim Horenkamp, 2016
-#
+########################################################################################
+# $Id: 44_ROLLO.pm 1100 2016-06-08 20:00:00Z                                         $ #
+# Modul zur einfacheren Rolladensteuerung                                              #
+#                                                                                      #
+# Thomas Ramm, 2016                                                                    #
+# Tim Horenkamp, 2016                                                                  #
+# Markus Moises, 2016																   #
+#                                                                                      #
 ########################################################################################
 #
 #  This programm is free software; you can redistribute it and/or modify
@@ -72,8 +73,9 @@ sub ROLLO_Initialize($) {
     . " commandUp commandUp2 commandUp3"
     . " commandDown commandDown2 commandDown3"
     . " commandStop commandStopDown commandStopUp "
-    . " automatic-enabled:on,off automatic-delay ".
-    $readingFnAttributes;
+    . " automatic-enabled:on,off automatic-delay "
+	. " drive-type:extern,system"
+	. $readingFnAttributes;
 
   $hash->{stoptime} = 0;
 
@@ -147,7 +149,7 @@ sub ROLLO_Set($@) {
 	ROLLO_Stop($hash);
     return undef;
   } elsif ($cmd eq "extern") {
-    readingsSingleUpdate($hash,"extern","extern",0);
+    readingsSingleUpdate($hash,"drive-type","extern",0);
     $cmd = $arg;
   } elsif ($cmd eq "reset") {
     readingsBeginUpdate($hash);
@@ -304,13 +306,13 @@ sub ROLLO_Start($) {
     readingsEndUpdate($hash,1);
 	
     #***** ROLLO NICHT LOSFAHREN WENN SCHON EXTERN GESTARTET *****#
-    if (ReadingsVal($name,"extern","undef") ne "extern") {
+    if (ReadingsVal($name,"drive-type","undef") ne "extern") {
 	  Log3 $name,4,"ROLLO sends: $command1   $command2   $command3";
       fhem("$command1") if ($command1 ne "");
       fhem("$command2") if ($command2 ne "");
       fhem("$command3") if ($command3 ne "");
     } else {
-      fhem("deletereading $name extern");
+      readingsSingleUpdate($hash,"drive-type","system",0);
       Log3 $name,5,"Befehle nicht ausgeführt da extern getriggert: $command1 | $command2 | $command3";
     }
 
@@ -354,10 +356,10 @@ sub ROLLO_Stop($) {
     $command = AttrVal($name,'commandStopDown',"") if(defined($attr{$name}{commandStopDown}) && $state eq "drive-down");
 
     # NUR WENN NICHT BEREITS EXTERN GESTOPPT
-    if (ReadingsVal($name,"extern","undef") ne "extern") {
+    if (ReadingsVal($name,"drive-type","undef") ne "extern") {
       fhem("$command") if ($command ne "");
     } else {
-      fhem("deletereading $name extern");
+      readingsSingleUpdate($hash,"drive-type","system",0);
       Log3 $name,5,"Rollo extern gestoppt";
     }
     Log3 $name,5,"ROLLO stop command: $command";
