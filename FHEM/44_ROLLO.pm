@@ -76,8 +76,8 @@ sub ROLLO_Initialize($) {
     . " automatic-enabled:on,off automatic-delay"
 	. " drive-type:extern,system"
     . " autoStop:1,0"
-	. " type:normal,Homekit"
-	. $readingFnAttributes;
+	. " type:normal,HomeKit"
+	. " " . $readingFnAttributes;
 
   $hash->{stoptime} = 0;
 
@@ -176,10 +176,11 @@ sub ROLLO_Set($@) {
     return;
   }
   my $desiredPos = $cmd;
-  my $typ = ReadingsVal($name,"type","normal");
+  my $typ = AttrVal($name,"type","normal");
   if ($cmd eq "position" && $arg ~~ @positionsets)
   {
-	if ($typ eq "Homekit"){
+	if ($typ eq "HomeKit"){
+		Log3 $name,1,"Berechnete Position umkehren von $arg zu (100-$arg)";
 		$arg = 100-$arg
 	}
     $cmd = "position-". $arg;
@@ -187,7 +188,7 @@ sub ROLLO_Set($@) {
   }
   elsif ($cmd ~~ @positionsets)
   {
-  if ($typ eq "Homekit"){
+  if ($typ eq "HomeKit"){
 		$cmd = 100-$cmd
 	}
     $cmd = "position-". $cmd;
@@ -386,18 +387,20 @@ sub ROLLO_Stop($) {
     my $newpos = int($position/10+0.5)*10;
     $newpos = 0 if($newpos < 0);
     $newpos = 100 if ($newpos > 100);
-	 
-	if (ReadingsVal($name,"type","normal") eq "Homekit"){
-		$newpos = 100-$newpos
-	}
-
-    my $state = "position-$newpos";
-	
-    my %rhash = reverse %positions;
+	my $state;
+	#position in text umwandeln
+	my %rhash = reverse %positions;
     if (defined($rhash{$newpos}))
     {
       $state = $rhash{$newpos};
-    }
+	#ich kenne keinen Text für die Position, also als position-nn anzeigen
+	} else {
+		#wenn ich die Position als Zahl anzeige muss ich sie bei HomeKit noch schnell umwandeln
+		if (AttrVal($name,"type","normal") eq "HomeKit"){
+			$newpos = 100-$newpos
+		}
+		$state = "position-$newpos";
+	}
     readingsSingleUpdate($hash,"state",$state,1);
   }
 
@@ -525,8 +528,7 @@ sub ROLLO_Attr(@) {
 	{
 		#auslesen des aktuellen Icon, wenn es nicht gesetzt ist, oder dem default entspricht, dann neue Zuweisung vornehmen
 		my $iconNormal  = 'open:fts_shutter_10:closed closed:fts_shutter_100:open schlitz:fts_shutter_80:closed drive-up:fts_shutter_up@red:stop drive-down:fts_shutter_down@red:stop position-100:fts_shutter_100:open position-90:fts_shutter_80:closed position-80:fts_shutter_80:closed position-70:fts_shutter_70:closed position-60:fts_shutter_60:closed position-50:fts_shutter_50:closed position-40:fts_shutter_40:open position-30:fts_shutter_30:open position-20:fts_shutter_20:open position-10:fts_shutter_10:open position-0:fts_shutter_10:closed';
-		my $iconHomeKit = 'open:fts_shutter_10:closed closed:fts_s
-		hutter_100:open drive-up:fts_shutter_up@red:stop drive-down:fts_shutter_down@red:stop position-100:fts_shutter_10:open position-90:fts_shutter_10:closed position-80:fts_shutter_20:closed position-70:fts_shutter_30:closed position-60:fts_shutter_40:closed position-50:fts_shutter_50:closed position-40:fts_shutter_60:open position-30:fts_shutter_70:open position-20:fts_shutter_80:open position-10:fts_shutter_90:open position-0:fts_shutter_100:closed';
+		my $iconHomeKit = 'open:fts_shutter_10:closed closed:fts_shutter_100:open drive-up:fts_shutter_up@red:stop drive-down:fts_shutter_down@red:stop position-100:fts_shutter_10:open position-90:fts_shutter_10:closed position-80:fts_shutter_20:closed position-70:fts_shutter_30:closed position-60:fts_shutter_40:closed position-50:fts_shutter_50:closed position-40:fts_shutter_60:open position-30:fts_shutter_70:open position-20:fts_shutter_80:open position-10:fts_shutter_90:open position-0:fts_shutter_100:closed';
 		my $iconAktuell = ReadingsVal($name,"devStateIcon","kein");
 		if (($aVal eq "HomeKit") && (($iconAktuell eq $iconNormal) || ($iconAktuell eq "kein"))) {
 			fhem("attr $name devStateIcon $iconHomeKit");
