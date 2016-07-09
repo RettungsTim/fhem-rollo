@@ -68,6 +68,7 @@ sub ROLLO_Initialize($) {
     . " excessTop"
     . " excessBottom"
     . " switchTime"
+	. " resetTime"
     . " reactionTime"
     . " blockMode:blocked,force-open,force-closed,only-up,only-down,half-up,half-down,none"
     . " commandUp commandUp2 commandUp3"
@@ -97,6 +98,7 @@ sub ROLLO_Define($$) {
   $attr{$name}{"excessTop"} = 4;
   $attr{$name}{"excessBottom"} = 2;
   $attr{$name}{"switchTime"} = 1;
+  $attr{$name}{"resetTime"} = 0;
   $attr{$name}{"autoStop"} = 0; #neue Attribute sollten als default keine Änderung an der Funktionsweise bewirken.
   $attr{$name}{"type"} = "normal"; #neue Attribute sollten als default keine Änderung an der Funktionsweise bewirken.
  # $attr{$name}{"blockMode"} = "none";
@@ -425,8 +427,9 @@ sub ROLLO_calculatePosition(@) {
   # aktuelle Position = 6sec-1sec=5sec positionsfahrzeit=25steps=Position75
 
   #Frage1: habe ich noch "tote" Sekunden vor mir wegen endposition?
-  $drivetime_rest -= AttrVal($name,'excessTop',0) if($end == 0);
-  $drivetime_rest -= AttrVal($name,'excessBottom',0) if($end == 100);
+  my $resetTime = AttrVal($name,'resetTime',0);
+  $drivetime_rest -= (AttrVal($name,'excessTop',0) + $resetTime)  if($end == 0);
+  $drivetime_rest -= (AttrVal($name,'excessBottom',0) + $resetTime) if($end == 100);
   #wenn ich schon in der nachlaufzeit war, setze ich die Position auf 99, dann kann man nochmal für die nachlaufzeit starten
   if ($start == $end) {
 	 $position = $end;
@@ -470,6 +473,7 @@ sub ROLLO_calculateDriveTime(@) {
 
   $drivetime += AttrVal($name,'excessTop',0) if($oldpos == 0 or $newpos == 0);
   $drivetime += AttrVal($name,'excessBottom',0) if($oldpos == 100 or $newpos == 100);
+  $drivetime += AttrVal($name,'resetTime', 0) if($newpos == 0 or $newpos == 100);
 
   Log3 $name,5,"drivetime: oldpos=$oldpos,newpos=$newpos,direction=$direction,time=$time,steps=$steps,drivetime=$drivetime";
   return $drivetime;
