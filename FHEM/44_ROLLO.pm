@@ -158,10 +158,14 @@ sub ROLLO_Set($@) {
     readingsSingleUpdate($hash,"drive-type","extern",0);
     $cmd = $arg;
   } elsif ($cmd eq "reset") {
+	my $reset_position = $positions{$arg};
+	if (AttrVal($name,"type","normal") eq "HomeKit") {
+		$reset_position = 100-$reset_position;
+	}
     readingsBeginUpdate($hash);
     readingsBulkUpdate($hash,"state",$arg);
-    readingsBulkUpdate($hash,"desired_position",$positions{$arg});
-    readingsBulkUpdate($hash,"position",$positions{$arg});
+    readingsBulkUpdate($hash,"desired_position",$reset_position);
+    readingsBulkUpdate($hash,"position",$reset_position);
     readingsEndUpdate($hash,1);
     return undef;
   } elsif ($cmd eq "blocked") {
