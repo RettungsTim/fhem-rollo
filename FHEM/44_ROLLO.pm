@@ -608,41 +608,37 @@ sub ROLLO_Attr(@) {
 			</ul>
 			<h4>Attributes</h4>
 			<ul>
-				<li><a name="rollo_secondsDown"><code>attr &lt;Rollo-Device&gt; secondsDown
-							&lt;string&gt;</code></a>
+				<li><a name="rollo_type"><code>attr &lt;Rollo-Device&gt; type [normal|HomeKit]</code></a>
+					<br />Type differentiation to support different hardware. Depending on the selected type, the direction of which the position is expected to set:<BR/>
+							normal = position 0 means open, position 100 means closed<BR/>
+							HomeKit = position 100 means open, position 0 means closed</li>
+				<li><a name="rollo_secondsDown"><code>attr &lt;Rollo-Device&gt; secondsDown	&lt;number&gt;</code></a>
 					<br />time in seconds needed to drive the shutter down</li>
-				<li><a name="rollo_secondsUp"><code>attr &lt;Rollo-Device&gt; secondsUp
-							&lt;string&gt;</code></a>
+				<li><a name="rollo_secondsUp"><code>attr &lt;Rollo-Device&gt; secondsUp	&lt;number&gt;</code></a>
 					<br />time in seconds needed to drive the shutter up</li>
-				<li><a name="rollo_excessTop"><code>attr &lt;Rollo-Device&gt; excessTop
-							&lt;string&gt;</code></a>
+				<li><a name="rollo_excessTop"><code>attr &lt;Rollo-Device&gt; excessTop	&lt;number&gt;</code></a>
 					<br />additional time the shutter need from last visible top position to the end position</li>
-				<li><a name="rollo_excessBottom"><code>attr &lt;Rollo-Device&gt; excessBottom
-							&lt;string&gt;</code></a>
+				<li><a name="rollo_excessBottom"><code>attr &lt;Rollo-Device&gt; excessBottom &lt;number&gt;</code></a>
 					<br />additional time the shutter need from visible closed position to the end position</li>
-				<li><a name="rollo_switchTime"><code>attr &lt;Rollo-Device&gt; switchTime
-							&lt;string&gt;</code></a>
+				<li><a name="rollo_switchTime"><code>attr &lt;Rollo-Device&gt; switchTime &lt;number&gt;</code></a>
 					<br />time for the shutter to switch from one driving direction to other driving direction</li>
-				<li><a name="rollo_reactionTime"><code>attr &lt;Rollo-Device&gt; reactionTime
-							&lt;string&gt;</code></a> 
+				<li><a name="rollo_resetTime"><code>attr &lt;Rollo-Device&gt; resetTime	&lt;number&gt;</code></a>
+					<br />additional time the shutter remain in driving state if driving to final positions (open, closed), to ensure that the final position was really approached. So difference in the position calculation can be corrected.</li>
+				<li><a name="rollo_reactionTime"><code>attr &lt;Rollo-Device&gt; reactionTime &lt;number&gt;</code></a> 
 					<br />additional time the shutter need to start (from start command to realy starting the motor)</li>
-				<li><a name="rollo_commandUp"><code>attr &lt;Rollo-Device&gt; commandUp
-							&lt;string&gt;</code></a>
+				<li><a name="rollo_autoStop"><code>attr &lt;Rollo-Device&gt; autoStop [0|1]</code></a>
+					<br />It must be carried out no stop command, the shutter stops by itself.</li>
+				<li><a name="rollo_commandUp"><code>attr &lt;Rollo-Device&gt; commandUp &lt;string&gt;</code></a>
 					<br />Up to three commands you have to send to drive the shutter up</li>
-				<li><a name="rollo_commandDown"><code>attr &lt;Rollo-Device&gt; commandDown
-							&lt;string&gt;</code></a>
+				<li><a name="rollo_commandDown"><code>attr &lt;Rollo-Device&gt; commandDown &lt;string&gt;</code></a>
 					<br />Up to three commandy you have to send to drive the shutter down</li>					
-				<li><a name="rollo_commandStop"><code>attr &lt;Rollo-Device&gt; commandStop
-							&lt;string&gt;</code></a>
+				<li><a name="rollo_commandStop"><code>attr &lt;Rollo-Device&gt; commandStop &lt;string&gt;</code></a>
 					<br />command to stop a driving shutter</li>					
-				<li><a name="rollo_commandStopDown"><code>attr &lt;Rollo-Device&gt; commandStopDown
-							&lt;string&gt;</code></a>
+				<li><a name="rollo_commandStopDown"><code>attr &lt;Rollo-Device&gt; commandStopDown &lt;string&gt;</code></a>
 					<br />command to stop a down driving shutter, if not set commandStop is executed</li>					
-				<li><a name="rollo_commandStopUp"><code>attr &lt;Rollo-Device&gt; commandStopUp
-							&lt;string&gt;</code></a>
+				<li><a name="rollo_commandStopUp"><code>attr &lt;Rollo-Device&gt; commandStopUp &lt;string&gt;</code></a>
 					<br />command to stop a up driving shutter, if not set commandStop is executed</li>
-				<li><a name="rollo_blockMode"><code>attr &lt;Rollo-Device&gt; blockMode
-							 [blocked|force-open|force-closed|only-up|only-down|half-up|half-down|none]</code></a>
+				<li><a name="rollo_blockMode"><code>attr &lt;Rollo-Device&gt; blockMode [blocked|force-open|force-closed|only-up|only-down|half-up|half-down|none]</code></a>
 					<br />the possibility of the shutter in blocked mode:<br>
 							blocked = shutter can't drive<br>
 							force-open = drive the shutter up if a drive command is send<br>
@@ -652,11 +648,9 @@ sub ROLLO_Attr(@) {
 							half-up = only drive to positions above half-up<br>
 							half-down = only drive to positions below half-down<br>
 							none = blockmode is disabled</li>
-				<li><a name="rollo_automatic-enabled"><code>attr &lt;Rollo-Device&gt; automatic-enabled
-							&lt;string&gt;]</code></a>
+				<li><a name="rollo_automatic-enabled"><code>attr &lt;Rollo-Device&gt; automatic-enabled [yes|no]</code></a>
 					<br />if disabled the additional module ROLLO_AUTOMATIC don't drive the shutter</li>
-				<li><a name="rollo_automatic-delay"><code>attr &lt;Rollo-Device&gt; automatic-delay
-							&lt;string&gt;</code></a>
+				<li><a name="rollo_automatic-delay"><code>attr &lt;Rollo-Device&gt; automatic-delay	&lt;number&gt;</code></a>
 					<br />if set any ROLLO_AUTOMATIC  commandy are executed delayed (in minutes)<br></li>
 				<li><a href="#readingFnAttributes">readingFnAttributes</a></li>
 			</ul>
@@ -719,41 +713,37 @@ sub ROLLO_Attr(@) {
 			</ul>
 			<h4>Attributes</h4>
 			<ul>
-				<li><a name="rollo_secondsDown"><code>attr &lt;Rollo-Device&gt; secondsDown
-							&lt;string&gt;</code></a>
+				<li><a name="rollo_type"><code>attr &lt;Rollo-Device&gt; type [normal|HomeKit]</code></a>
+					<br />Typunterscheidung zur unterstützung verschiedener Hardware. Abhängig vom gewählten Typ wird die Richtung von der die Position gerechnet wird festgelegt:<BR/>
+							normal = Position 0 ist offen, Position 100 ist geschlossen<BR/>
+							HomeKit = Position 100 ist offen, Position 0 ist geschlossen</li>
+				<li><a name="rollo_secondsDown"><code>attr &lt;Rollo-Device&gt; secondsDown	&lt;number&gt;</code></a>
 					<br />Sekunden zum hochfahren</li>
-				<li><a name="rollo_secondsUp"><code>attr &lt;Rollo-Device&gt; secondsUp
-							&lt;string&gt;</code></a>
+				<li><a name="rollo_secondsUp"><code>attr &lt;Rollo-Device&gt; secondsUp	&lt;number&gt;</code></a>
 					<br />Sekunden zum herunterfahren</li>
-				<li><a name="rollo_excessTop"><code>attr &lt;Rollo-Device&gt; excessTop
-							&lt;string&gt;</code></a>
+				<li><a name="rollo_excessTop"><code>attr &lt;Rollo-Device&gt; excessTop	&lt;number&gt;</code></a>
 					<br />Zeit die mein Rollo Fahren muss ohne das sich die Rollo-Position ändert (bei mir fährt der Rollo noch in die Wand, ohne das man es am Fenster sieht, die Position ist also schon bei 0%)</li>
-				<li><a name="rollo_excessBottom"><code>attr &lt;Rollo-Device&gt; excessBottom
-							&lt;string&gt;</code></a>
+				<li><a name="rollo_excessBottom"><code>attr &lt;Rollo-Device&gt; excessBottom &lt;number&gt;</code></a>
 					<br />(siehe excessTop)</li>
-				<li><a name="rollo_switchTime"><code>attr &lt;Rollo-Device&gt; switchTime
-							&lt;string&gt;</code></a>
+				<li><a name="rollo_switchTime"><code>attr &lt;Rollo-Device&gt; switchTime &lt;number&gt;</code></a>
 					<br />Zeit die zwischen 2 gegensätzlichen Laufbefehlen pausiert werden soll, also wenn der Rollo z.B. gerade runter fährt und ich den Befehl gebe hoch zu fahren, dann soll 1 sekunde gewartet werden bis der Motor wirklich zum stillstand kommt, bevor es wieder in die andere Richtung weiter geht. Dies ist die einzige Zeit die nichts mit der eigentlichen Laufzeit des Motors zu tun hat, sondern ein timer zwischen den Laufzeiten.</li>
-				<li><a name="rollo_reactionTime"><code>attr &lt;Rollo-Device&gt; reactionTime
-							&lt;string&gt;</code></a> 
+				<li><a name="rollo_resetTime"><code>attr &lt;Rollo-Device&gt; resetTime	&lt;number&gt;</code></a>
+					<br />Zeit die beim Anfahren von Endpositionen (offen,geschlossen) der Motor zusätzlich an bleiben soll um sicherzustellen das die Endposition wirklich angefahren wurde. Dadurch können Differenzen in der Positionsberechnung korrigiert werden.</li>
+				<li><a name="rollo_reactionTime"><code>attr &lt;Rollo-Device&gt; reactionTime &lt;number&gt;</code></a> 
 					<br />Zeit für den Motor zum reagieren</li>
-				<li><a name="rollo_commandUp"><code>attr &lt;Rollo-Device&gt; commandUp
-							&lt;string&gt;</code></a>
+				<li><a name="rollo_autoStop"><code>attr %lt;Rollo-Device&gt; autoStop [0|1]</code></a>
+					<br />Es muss kein Stop-Befehl ausgeführt werden, das Rollo stoppt von selbst.</li>
+				<li><a name="rollo_commandUp"><code>attr &lt;Rollo-Device&gt; commandUp	&lt;string&gt;</code></a>
 					<br />Es werden bis zu 3 beliebige Befehle zum hochfahren ausgeführt</li>
-				<li><a name="rollo_commandDown"><code>attr &lt;Rollo-Device&gt; commandDown
-							&lt;string&gt;</code></a>
+				<li><a name="rollo_commandDown"><code>attr &lt;Rollo-Device&gt; commandDown	&lt;string&gt;</code></a>
 					<br />Es werden bis zu 3 beliebige Befehle zum runterfahren ausgeführt</li>					
-				<li><a name="rollo_commandStop"><code>attr &lt;Rollo-Device&gt; commandStop
-							&lt;string&gt;</code></a>
+				<li><a name="rollo_commandStop"><code>attr &lt;Rollo-Device&gt; commandStop	&lt;string&gt;</code></a>
 					<br />Befehl der zum Stoppen ausgeführt wird, sofern nicht commandStopDown bzw. commandStopUp definiert sind</li>					
-				<li><a name="rollo_commandStopDown"><code>attr &lt;Rollo-Device&gt; commandStopDown
-							&lt;string&gt;</code></a>
+				<li><a name="rollo_commandStopDown"><code>attr &lt;Rollo-Device&gt; commandStopDown	&lt;string&gt;</code></a>
 					<br />Befehl der zum stoppen ausgeführt wird, wenn der Rollo gerade herunterfährt. Wenn nicht definiert wird commandStop ausgeführt</li>					
-				<li><a name="rollo_commandStopUp"><code>attr &lt;Rollo-Device&gt; commandStopUp
-							&lt;string&gt;</code></a>
+				<li><a name="rollo_commandStopUp"><code>attr &lt;Rollo-Device&gt; commandStopUp	&lt;string&gt;</code></a>
 					<br />Befehl der zum Stoppen ausgeführt wird,wenn der Rollo gerade hochfährt. Wenn nicht definiert wird commandStop ausgeführt</li>
-				<li><a name="rollo_blockMode"><code>attr &lt;Rollo-Device&gt; blockMode
-							 [blocked|force-open|force-closed|only-up|only-down|half-up|half-down|none]</code></a>
+				<li><a name="rollo_blockMode"><code>attr &lt;Rollo-Device&gt; blockMode [blocked|force-open|force-closed|only-up|only-down|half-up|half-down|none]</code></a>
 					<br />wenn ich den Befehl blocked ausführe, dann wird aufgrund der blockMode-Art festgelegt wie mein Rollo reagieren soll:<br>
 							blocked = Rollo lässt sich nicht mehr bewegen<br>
 							force-open = bei einem beliebigen Fahrbefehl wird Rollo hochgefahren<br>
@@ -763,11 +753,9 @@ sub ROLLO_Attr(@) {
 							half-up = es werden nur die Positionen 50-100 angefahren, bei Position <50 wird Position 50% angefahren,<br>
 							half-down = es werden nur die Positionen 0-50 angefahren, bei Position >50 wird Position 50 angefahren<br>
 							none = block-Modus ist deaktiviert</li>
-				<li><a name="rollo_automatic-enabled"><code>attr &lt;Rollo-Device&gt; automatic-enabled
-							&lt;string&gt;]</code></a>
+				<li><a name="rollo_automatic-enabled"><code>attr &lt;Rollo-Device&gt; automatic-enabled	[on|off]</code></a>
 					<br />Wenn auf off gestellt, haben Befehle über Modul ROLLO_Automatic keine Auswirkungen auf diesen Rollo</li>
-				<li><a name="rollo_automatic-delay"><code>attr &lt;Rollo-Device&gt; automatic-delay
-							&lt;string&gt;</code></a>
+				<li><a name="rollo_automatic-delay"><code>attr &lt;Rollo-Device&gt; automatic-delay	&lt;string&gt;</code></a>
 					<br />Dieses Attribut wird nur fuer die Modulerweiterung ROLLADEN_Automatic benoetigt.<br>
 					Hiermit kann einge Zeitverzoegerund fuer den Rolladen eingestellt werden, werden die Rolladen per Automatic heruntergefahren, so wird dieser um die angegebenen minuten spaeter heruntergefahren. 
 					</li>
