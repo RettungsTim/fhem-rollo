@@ -74,8 +74,8 @@ sub ROLLO_Initialize($) {
     . " commandUp commandUp2 commandUp3"
     . " commandDown commandDown2 commandDown3"
     . " commandStop commandStopDown commandStopUp"
-    . " automatic-enabled:on,off automatic-delay"
-	. " drive-type:extern,system"
+    . " automatic-enabled:on,off"
+	. " automatic-delay"
     . " autoStop:1,0"
 	. " type:normal,HomeKit"
 	. " " . $readingFnAttributes;
@@ -755,7 +755,7 @@ sub ROLLO_Attr(@) {
 							none = block-Modus ist deaktiviert</li>
 				<li><a name="rollo_automatic-enabled"><code>attr &lt;Rollo-Device&gt; automatic-enabled	[on|off]</code></a>
 					<br />Wenn auf off gestellt, haben Befehle über Modul ROLLO_Automatic keine Auswirkungen auf diesen Rollo</li>
-				<li><a name="rollo_automatic-delay"><code>attr &lt;Rollo-Device&gt; automatic-delay	&lt;string&gt;</code></a>
+				<li><a name="rollo_automatic-delay"><code>attr &lt;Rollo-Device&gt; automatic-delay	&lt;number&gt;</code></a>
 					<br />Dieses Attribut wird nur fuer die Modulerweiterung ROLLADEN_Automatic benoetigt.<br>
 					Hiermit kann einge Zeitverzoegerund fuer den Rolladen eingestellt werden, werden die Rolladen per Automatic heruntergefahren, so wird dieser um die angegebenen minuten spaeter heruntergefahren. 
 					</li>
