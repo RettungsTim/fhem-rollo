@@ -67,7 +67,7 @@ sub ROLLO_Initialize($) {
     . " secondsUp"
     . " excessTop"
     . " excessBottom"
-    . " resetTime"
+    . " switchTime"
     . " reactionTime"
     . " blockMode:blocked,force-open,force-closed,only-up,only-down,half-up,half-down,none"
     . " commandUp commandUp2 commandUp3"
@@ -96,7 +96,7 @@ sub ROLLO_Define($$) {
   $attr{$name}{"secondsUp"} = 30;
   $attr{$name}{"excessTop"} = 4;
   $attr{$name}{"excessBottom"} = 2;
-  $attr{$name}{"resetTime"} = 1;
+  $attr{$name}{"switchTime"} = 1;
   $attr{$name}{"autoStop"} = 0; #neue Attribute sollten als default keine Änderung an der Funktionsweise bewirken.
   $attr{$name}{"type"} = "normal"; #neue Attribute sollten als default keine Änderung an der Funktionsweise bewirken.
  # $attr{$name}{"blockMode"} = "none";
@@ -290,7 +290,7 @@ sub ROLLO_Start($) {
       Log3 $name,2,"wrong direction";
 	Log3 $name,3,"Stopaufruf 5";
       ROLLO_Stop($hash);
-      InternalTimer(int(gettimeofday())+AttrVal($name,'resetTime',0) , "ROLLO_Start", $hash, 0);
+      InternalTimer(int(gettimeofday())+AttrVal($name,'switchTime',0) , "ROLLO_Start", $hash, 0);
       return;
     }
   }
@@ -616,7 +616,7 @@ sub ROLLO_Attr(@) {
 				<li><a name="rollo_excessBottom"><code>attr &lt;Rollo-Device&gt; excessBottom
 							&lt;string&gt;</code></a>
 					<br />additional time the shutter need from visible closed position to the end position</li>
-				<li><a name="rollo_resetTime"><code>attr &lt;Rollo-Device&gt; resetTime
+				<li><a name="rollo_switchTime"><code>attr &lt;Rollo-Device&gt; switchTime
 							&lt;string&gt;</code></a>
 					<br />time for the shutter to switch from one driving direction to other driving direction</li>
 				<li><a name="rollo_reactionTime"><code>attr &lt;Rollo-Device&gt; reactionTime
@@ -727,7 +727,7 @@ sub ROLLO_Attr(@) {
 				<li><a name="rollo_excessBottom"><code>attr &lt;Rollo-Device&gt; excessBottom
 							&lt;string&gt;</code></a>
 					<br />(siehe excessTop)</li>
-				<li><a name="rollo_resetTime"><code>attr &lt;Rollo-Device&gt; resetTime
+				<li><a name="rollo_switchTime"><code>attr &lt;Rollo-Device&gt; switchTime
 							&lt;string&gt;</code></a>
 					<br />Zeit die zwischen 2 gegensätzlichen Laufbefehlen pausiert werden soll, also wenn der Rollo z.B. gerade runter fährt und ich den Befehl gebe hoch zu fahren, dann soll 1 sekunde gewartet werden bis der Motor wirklich zum stillstand kommt, bevor es wieder in die andere Richtung weiter geht. Dies ist die einzige Zeit die nichts mit der eigentlichen Laufzeit des Motors zu tun hat, sondern ein timer zwischen den Laufzeiten.</li>
 				<li><a name="rollo_reactionTime"><code>attr &lt;Rollo-Device&gt; reactionTime
