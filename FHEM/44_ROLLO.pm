@@ -154,7 +154,7 @@ sub ROLLO_Set($@) {
     return undef;
   } 
   if ($cmd eq "extern") {
-    readingsSingleUpdate($hash,"drive-type","extern",0);
+    readingsSingleUpdate($hash,"drive-type","extern",1);
     $cmd = $arg;
   } elsif ($cmd eq "reset") {
 	my $reset_position = $positions{$arg};
@@ -319,11 +319,12 @@ sub ROLLO_Start($) {
     #***** ROLLO NICHT LOSFAHREN WENN SCHON EXTERN GESTARTET *****#
     if (ReadingsVal($name,"drive-type","undef") ne "extern") {
 	  Log3 $name,4,"ROLLO ($name) execute following commands: $command1; $command2; $command3";
+	  readingsSingleUpdate($hash,"drive-type","modul",1);
       fhem("$command1") if ($command1 ne "");
       fhem("$command2") if ($command2 ne "");
       fhem("$command3") if ($command3 ne "");
     } else {
-      readingsSingleUpdate($hash,"drive-type","modul",0);
+      #readingsSingleUpdate($hash,"drive-type","extern",1);
       Log3 $name,4,"ROLLO ($name) drive-type is 'extern' don't execute driving commands";
     }
 
@@ -368,7 +369,7 @@ sub ROLLO_Stop($) {
       fhem("$command") if ($command ne "");
 	  Log3 $name,4,"ROLLO ($name) stopped by excute the command: '$command'";
     } else {
-      readingsSingleUpdate($hash,"drive-type","modul",0);
+      readingsSingleUpdate($hash,"drive-type","na",1);
       Log3 $name,4,"ROLLO ($name) is in drive-type 'extern'";
     }
   }
