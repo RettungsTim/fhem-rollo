@@ -331,7 +331,7 @@ sub ROLLO_Start($) {
       fhem("$command2") if ($command2 ne "");
       fhem("$command3") if ($command3 ne "");
     } else {
-      readingsSingleUpdate($hash,"drive-type","system",0);
+      readingsSingleUpdate($hash,"drive-type","modul",0);
       Log3 $name,5,"Befehle nicht ausgeführt da extern getriggert: $command1 | $command2 | $command3";
     }
 
@@ -378,7 +378,7 @@ sub ROLLO_Stop($) {
     if (ReadingsVal($name,"drive-type","undef") ne "extern") {
       fhem("$command") if ($command ne "");
     } else {
-      readingsSingleUpdate($hash,"drive-type","system",0);
+      readingsSingleUpdate($hash,"drive-type","modul",0);
       Log3 $name,5,"Rollo extern gestoppt";
     }
     Log3 $name,5,"ROLLO stop command: $command";
