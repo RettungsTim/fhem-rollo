@@ -131,7 +131,7 @@ sub ROLLO_Set($@) {
   my $arg = "";
   $arg = $a[2] if defined $a[2];
 
-  Log3 $name,4,"ROLLO_Set '$cmd' to '$arg'" if ($cmd ne "?");
+  Log3 $name,4,"ROLLO_Set $cmd to $arg" if ($cmd ne "?");
 
   my @positionsets = ("0","10","20","30","40","50","60","70","80","90","100");
 
@@ -141,14 +141,14 @@ sub ROLLO_Set($@) {
         $param .= " $val:$sets{$val}";
     }
     if ($cmd ne "?") {
-      Log3 $name,2,"ERROR: Unknown command '$cmd', choose one of '$param'";
+      Log3 $name,2,"ERROR: Unknown command $cmd, choose one of $param";
     }
-    return "Unknown argument '$cmd', choose one of '$param'";
+    return "Unknown argument $cmd, choose one of $param";
   }
 
   if (($cmd eq "stop") && (ReadingsVal($name,"state",'') !~ /drive/))
   {
-    Log3 $name,3,"WARNING: command is 'stop' but shutter isn't driving!";
+    Log3 $name,3,"WARNING: command is stop but shutter is not driving!";
     RemoveInternalTimer($hash);
 	ROLLO_Stop($hash);
     return undef;
@@ -184,7 +184,7 @@ sub ROLLO_Set($@) {
   if ($cmd eq "position" && $arg ~~ @positionsets)
   {
 	if ($typ eq "HomeKit"){
-		Log3 $name,4,"invert Position from '$arg' to '(100-$arg)'";
+		Log3 $name,4,"invert Position from $arg to (100-$arg)";
 		$arg = 100-$arg
 	}
     $cmd = "position-". $arg;
@@ -325,7 +325,7 @@ sub ROLLO_Start($) {
       fhem("$command3") if ($command3 ne "");
     } else {
       #readingsSingleUpdate($hash,"drive-type","extern",1);
-      Log3 $name,4,"ROLLO ($name) drive-type is 'extern' don't execute driving commands";
+      Log3 $name,4,"ROLLO ($name) drive-type is extern, not executing driving commands";
     }
 
     $hash->{stoptime} = int(gettimeofday()+$time);
@@ -367,10 +367,10 @@ sub ROLLO_Stop($) {
     # NUR WENN NICHT BEREITS EXTERN GESTOPPT
     if (ReadingsVal($name,"drive-type","undef") ne "extern") {
       fhem("$command") if ($command ne "");
-	  Log3 $name,4,"ROLLO ($name) stopped by excute the command: '$command'";
+	  Log3 $name,4,"ROLLO ($name) stopped by excute the command: $command";
     } else {
       readingsSingleUpdate($hash,"drive-type","na",1);
-      Log3 $name,4,"ROLLO ($name) is in drive-type 'extern'";
+      Log3 $name,4,"ROLLO ($name) is in drive-type extern";
     }
   }
 
@@ -435,7 +435,7 @@ sub ROLLO_calculatePosition(@) {
     $position = 0 if($position < 0);
     $position = 100 if($position > 100);
   }
-  Log3 $name,4,"ROLLO ($name) calculated Position is '$position'; rest drivetime is '$drivetime_rest'";
+  Log3 $name,4,"ROLLO ($name) calculated Position is $position; rest drivetime is $drivetime_rest";
   #aktuelle Position aktualisieren und zurückgeben
   readingsSingleUpdate($hash,"position",$position,100);
   return $position;
@@ -499,7 +499,7 @@ sub ROLLO_Get($@) {
   if (@a > 2) {
     $val = $a[2];
   }
-  Log3 $name,4,"ROLLO ($name) command: '$cmd', value: '$val'";
+  Log3 $name,4,"ROLLO ($name) command: $cmd, value: $val";
 }
 
 ################################################################## ATTR #####
