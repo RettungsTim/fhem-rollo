@@ -327,7 +327,7 @@ sub ROLLO_Start($) {
     #***** ROLLO NICHT LOSFAHREN WENN SCHON EXTERN GESTARTET *****#
     if (ReadingsVal($name,"drive-type","undef") ne "extern") {
 	  Log3 $name,4,"ROLLO sends: $command1   $command2   $command3";
-	  readingsSingleUpdate($hash,"drive-type","system",1);
+	  readingsSingleUpdate($hash,"drive-type","modul",1);
       fhem("$command1") if ($command1 ne "");
       fhem("$command2") if ($command2 ne "");
       fhem("$command3") if ($command3 ne "");
