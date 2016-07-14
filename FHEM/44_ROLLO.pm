@@ -120,17 +120,18 @@ sub ROLLO_Undef($) {
 sub ROLLO_Set($@) {
   my ($hash,@a) = @_;
   my $name = $hash->{NAME};
+  Log3 $name,5,"ROLLO ($name) >> Set";
 
   #allgemeine Fehler in der Parameterübergabe abfangen
   if ( @a < 2 ) {
-    Log3 $name,3,"\"set ROLLO\" needs at least one argument";
+    Log3 $name,2,"ERROR: \"set ROLLO\" needs at least one argument";
     return "\"ROLLO_Set\" needs at least one argument";
   }
   my $cmd =  $a[1];
   my $arg = "";
   $arg = $a[2] if defined $a[2];
 
-  Log3 $name,4,"ROLLO_Set $cmd:$arg" if ($cmd ne "?");
+  Log3 $name,4,"ROLLO_Set '$cmd' to '$arg'" if ($cmd ne "?");
 
   my @positionsets = ("0","10","20","30","40","50","60","70","80","90","100");
 
@@ -140,22 +141,19 @@ sub ROLLO_Set($@) {
         $param .= " $val:$sets{$val}";
     }
     if ($cmd ne "?") {
-      Log3 $name,3,"Unknown command $cmd, choose one of $param";
+      Log3 $name,2,"ERROR: Unknown command '$cmd', choose one of '$param'";
     }
-    return "Unknown argument $cmd, choose one of $param";
+    return "Unknown argument '$cmd', choose one of '$param'";
   }
-#allgemeine Fehler ENDE
-  Log3 $name,1,"cmd:$cmd | arg:$arg";
-
 
   if (($cmd eq "stop") && (ReadingsVal($name,"state",'') !~ /drive/))
   {
-    Log3 $name,1,"FEHLER: WARUM BIN ICH HIER?";
+    Log3 $name,3,"WARNING: command is 'stop' but shutter isn't driving!";
     RemoveInternalTimer($hash);
-    Log3 $name,3,"Stopaufruf 1";
 	ROLLO_Stop($hash);
     return undef;
-  } elsif ($cmd eq "extern") {
+  } 
+  if ($cmd eq "extern") {
     readingsSingleUpdate($hash,"drive-type","extern",0);
     $cmd = $arg;
   } elsif ($cmd eq "reset") {
@@ -169,13 +167,12 @@ sub ROLLO_Set($@) {
     readingsBulkUpdate($hash,"position",$reset_position);
     readingsEndUpdate($hash,1);
     return undef;
-  } elsif ($cmd eq "blocked") {
-	Log3 $name,3,"Stopaufruf 2";
+  } 
+  if ($cmd eq "blocked") {
     ROLLO_Stop($hash);
     readingsSingleUpdate($hash,"blocked","1",1);
     return if(AttrVal($name,"blockMode","none") eq "blocked");
   } elsif ($cmd eq "unblocked") {
-  	Log3 $name,3,"Stopaufruf 3";
     ROLLO_Stop($hash);
     readingsSingleUpdate($hash,"blocked","0",1);
     ROLLO_Start($hash);
@@ -187,7 +184,7 @@ sub ROLLO_Set($@) {
   if ($cmd eq "position" && $arg ~~ @positionsets)
   {
 	if ($typ eq "HomeKit"){
-		Log3 $name,1,"Berechnete Position umkehren von $arg zu (100-$arg)";
+		Log3 $name,4,"invert Position from '$arg' to '(100-$arg)'";
 		$arg = 100-$arg
 	}
     $cmd = "position-". $arg;
@@ -204,7 +201,6 @@ sub ROLLO_Set($@) {
     $desiredPos = $positions{$cmd}
   }
 
-  Log3 $name,1,"desired_position = $desiredPos" if($cmd ne "blocked") && ($cmd ne "stop");
   readingsSingleUpdate($hash,"command",$cmd,1);
   readingsSingleUpdate($hash,"desired_position",$desiredPos,1) if($cmd ne "blocked") && ($cmd ne "stop");
 
@@ -216,18 +212,19 @@ sub ROLLO_Set($@) {
 sub ROLLO_Start($) {
   my ($hash) = @_;
   my $name = $hash->{NAME};
+  Log3 $name,5,"ROLLO ($name) >> Start";
 
   my $command = ReadingsVal($name,"command","stop");
   my $desired_position = ReadingsVal($name,"desired_position",100);
   my $position = ReadingsVal($name,"position",0);
   my $state = ReadingsVal($name,"state","open");
 
-  Log3 $name,4,"ROLLO_Start: $name drive from $position to $desired_position. command: $command. state: $state";
+  Log3 $name,4,"ROLLO ($name) drive from $position to $desired_position. command: $command. state: $state";
 
   if(ReadingsVal($name,"blocked","0") eq "1" && $command ne "stop")
   {
     my $blockmode = AttrVal($name,"blockMode","none");
-    Log3 $name,3,"block mode: $blockmode - $position to $desired_position?";
+    Log3 $name,4,"block mode: $blockmode - $position to $desired_position?";
 
     if($blockmode eq "blocked")
     {
@@ -274,18 +271,15 @@ sub ROLLO_Start($) {
 
   my $direction = "down";
   $direction = "up" if ($position > $desired_position || $desired_position == 0);
-  Log3 $name,5,"$name position: $position -> $desired_position / direction: $direction";
+  Log3 $name,4,"ROLLO ($name) position: $position -> $desired_position / direction: $direction";
 
   #Ich fahre ja gerade...wo bin ich aktuell?
   if ($state =~ /drive-/)
   {
-
-		$position = ROLLO_calculatePosition($hash,$name);
+	$position = ROLLO_calculatePosition($hash,$name);
 
     if ($command eq "stop")
     {
-      #readingsSingleUpdate($hash,"position",$position,0);
-      Log3 $name,3,"Stopaufruf 4";
 	  ROLLO_Stop($hash);
       return;
     }
@@ -294,14 +288,12 @@ sub ROLLO_Start($) {
     $direction = "up" if ($position > $desired_position || $desired_position == 0);
     if ( (($state eq "drive-down") && ($direction eq "up")) || (($state eq "drive-up") && ($direction eq "down")) )
     {
-      Log3 $name,2,"wrong direction";
-	Log3 $name,3,"Stopaufruf 5";
+      Log3 $name,3,"driving into wrong direction. stop and change driving direction";
       ROLLO_Stop($hash);
       InternalTimer(int(gettimeofday())+AttrVal($name,'switchTime',0) , "ROLLO_Start", $hash, 0);
       return;
     }
   }
-
   
   RemoveInternalTimer($hash);
   my $time = ROLLO_calculateDriveTime($name,$position,$desired_position,$direction);
@@ -326,31 +318,28 @@ sub ROLLO_Start($) {
 	
     #***** ROLLO NICHT LOSFAHREN WENN SCHON EXTERN GESTARTET *****#
     if (ReadingsVal($name,"drive-type","undef") ne "extern") {
-	  Log3 $name,4,"ROLLO sends: $command1   $command2   $command3";
+	  Log3 $name,4,"ROLLO ($name) execute following commands: $command1; $command2; $command3";
       fhem("$command1") if ($command1 ne "");
       fhem("$command2") if ($command2 ne "");
       fhem("$command3") if ($command3 ne "");
     } else {
       readingsSingleUpdate($hash,"drive-type","modul",0);
-      Log3 $name,5,"Befehle nicht ausgeführt da extern getriggert: $command1 | $command2 | $command3";
+      Log3 $name,4,"ROLLO ($name) drive-type is 'extern' don't execute driving commands";
     }
 
     $hash->{stoptime} = int(gettimeofday()+$time);
     InternalTimer($hash->{stoptime}, "ROLLO_Timer", $hash, 1);
-    Log3 $name,5,"stops in $time seconds.";
-
-
+    Log3 $name,4,"ROLLO ($name) stop in $time seconds.";
   }
-  Log3 $name,5,"ROLLO ($name) << Start";
   return undef;
 }
 sub ROLLO_Timer($) {
   my ($hash) = @_;
   my $name = $hash->{NAME};
-  Log3 $name,5,"ROLLO ($name) >> Timer abgelaufen";
+  Log3 $name,5,"ROLLO ($name) >> Timer";
+  
   my $position = ReadingsVal($name,"desired_position",0);
   readingsSingleUpdate($hash,"position",$position,0);
-  Log3 $name,3,"Stopaufruf 6";
   ROLLO_Stop($hash);
   return undef;
 }
@@ -366,7 +355,7 @@ sub ROLLO_Stop($) {
   my $position = ReadingsVal($name,"position",0);
   my $state = ReadingsVal($name,"state","");
 
-  Log3 $name,4,"ROLLO_Stop: stops from $state at position $position";
+  Log3 $name,4,"ROLLO ($name): stops from $state at position $position";
 
   if( ($state =~ /drive-/ && $position > 0 && $position < 100 ) || AttrVal($name, "autoStop", 0) ne 1)
   {
@@ -377,11 +366,11 @@ sub ROLLO_Stop($) {
     # NUR WENN NICHT BEREITS EXTERN GESTOPPT
     if (ReadingsVal($name,"drive-type","undef") ne "extern") {
       fhem("$command") if ($command ne "");
+	  Log3 $name,4,"ROLLO ($name) stopped by excute the command: '$command'";
     } else {
       readingsSingleUpdate($hash,"drive-type","modul",0);
-      Log3 $name,5,"Rollo extern gestoppt";
+      Log3 $name,4,"ROLLO ($name) is in drive-type 'extern'";
     }
-    Log3 $name,5,"ROLLO stop command: $command";
   }
 
   if(ReadingsVal($name,"blocked","0") eq "1" && AttrVal($name,"blockMode","none") ne "none")
@@ -411,14 +400,13 @@ sub ROLLO_Stop($) {
     readingsSingleUpdate($hash,"state",$state,1);
   }
 
-  Log3 $name,5,"ROLLO ($name) << Stop";
   return undef;
 }
 #****************************************************************************
 sub ROLLO_calculatePosition(@) {
   my ($hash,$name) = @_;
   my ($position);
-  Log3 $name,4,"calculate position for $name";
+  Log3 $name,5,"ROLLO ($name) >> calculatePosition";
 
   my $start = ReadingsVal($name,"position",100);
   my $end   = ReadingsVal($name,"desired_position",0);
@@ -446,7 +434,7 @@ sub ROLLO_calculatePosition(@) {
     $position = 0 if($position < 0);
     $position = 100 if($position > 100);
   }
-  Log3 $name,4,"calculated Position is $position (drivetime_rest is $drivetime_rest)";
+  Log3 $name,4,"ROLLO ($name) calculated Position is '$position'; rest drivetime is '$drivetime_rest'";
   #aktuelle Position aktualisieren und zurückgeben
   readingsSingleUpdate($hash,"position",$position,100);
   return $position;
@@ -454,7 +442,7 @@ sub ROLLO_calculatePosition(@) {
 #****************************************************************************
 sub ROLLO_calculateDriveTime(@) {
   my ($name,$oldpos,$newpos,$direction) = @_;
-  Log3 $name,4,"ROLLO going $direction: $oldpos > $newpos";
+  Log3 $name,5,"ROLLO ($name) >> calculateDriveTime | going $direction: from $oldpos to $newpos";
 
   my ($time, $steps);
   if ($direction eq "up") {
@@ -465,11 +453,11 @@ sub ROLLO_calculateDriveTime(@) {
     $steps = $newpos-$oldpos;
   }
   if ($steps == 0) {
-    Log3 $name,3,"already at position!";
+    Log3 $name,4,"already at position!";
   }
 
   if(!defined($time)) {
-    Log3 $name,1,"ROLLO ERROR: missing attribute secondsUp or secondsDown";
+    Log3 $name,2,"ERROR: missing attribute secondsUp or secondsDown";
     $time = 60;
   }
 
@@ -480,7 +468,7 @@ sub ROLLO_calculateDriveTime(@) {
   $drivetime += AttrVal($name,'excessBottom',0) if($oldpos == 100 or $newpos == 100);
   $drivetime += AttrVal($name,'resetTime', 0) if($newpos == 0 or $newpos == 100);
 
-  Log3 $name,5,"drivetime: oldpos=$oldpos,newpos=$newpos,direction=$direction,time=$time,steps=$steps,drivetime=$drivetime";
+  Log3 $name,4,"ROLLO ($name) calculateDriveTime: oldpos=$oldpos,newpos=$newpos,direction=$direction,time=$time,steps=$steps,drivetime=$drivetime";
   return $drivetime;
 }
 
@@ -489,46 +477,41 @@ sub ROLLO_calculateDriveTime(@) {
 sub ROLLO_Get($@) {
   my ($hash, @a) = @_;
   my $name = $hash->{NAME};
+  Log3 $name,5,"ROLLO ($name) >> Get";
 
   #-- get version
   if( $a[1] eq "version") {
     return "$name.version => $version";
   }
   if ( @a < 2 ) {
-    Log3 $name,3, "\"get ROLLO\" needs at least one argument";
+    Log3 $name,2, "ERROR: \"get ROLLO\" needs at least one argument";
     return "\"get ROLLO\" needs at least one argument";
   }
 
   my $cmd = $a[1];
   if(!$gets{$cmd}) {
     my @cList = keys %gets;
-    Log3 $name,3,"Unknown argument $cmd, choose one of " . join(" ", @cList) if ($cmd ne "?");
+    Log3 $name,3,"ERROR: Unknown argument $cmd, choose one of " . join(" ", @cList) if ($cmd ne "?");
     return "Unknown argument $cmd, choose one of " . join(" ", @cList);
   }
   my $val = "";
   if (@a > 2) {
     $val = $a[2];
   }
-  Log3 $name,5,"ROLLO_Get -> $cmd:$val";
-
-#  if ($cmd eq "write_hash_to_log") {
-#    Log3 $name,1,"----- Write Hash to Log START -----";
-#    Log3 $name,1,Dumper($hash);
-#    Log3 $name,1,"----- Write Hash to Log END -------"
-#  }
-
+  Log3 $name,4,"ROLLO ($name) command: '$cmd', value: '$val'";
 }
 
 ################################################################## ATTR #####
 #
 sub ROLLO_Attr(@) {
   my ($cmd,$name,$aName,$aVal) = @_;
+  Log3 $name,5,"ROLLO ($name) >> Attr";
 
   if ($cmd eq "set") {
     if ($aName eq "Regex") {
       eval { qr/$aVal/ };
       if ($@) {
-        Log3 $name, 3, "ROLLO: Invalid regex in attr $name $aName $aVal: $@";
+        Log3 $name, 2, "ROLLO ($name):ERROR Invalid regex in attr $name $aName $aVal: $@";
 	return "Invalid Regex $aVal";
       }
     }
@@ -545,7 +528,6 @@ sub ROLLO_Attr(@) {
 		if (($aVal eq "normal") && (($iconAktuell eq $iconHomeKit) || ($iconAktuell eq "kein"))) {
 			fhem("attr $name devStateIcon $iconNormal");
 		}
-  
 	}
 
   }
@@ -553,7 +535,6 @@ sub ROLLO_Attr(@) {
 }
 
 1;
-
 
 =pod
 =begin html
