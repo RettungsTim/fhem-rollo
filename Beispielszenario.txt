@@ -1,0 +1,130 @@
+define TestRollo_RUNTER dummy
+attr TestRollo_RUNTER room Test
+attr TestRollo_RUNTER webCmd on:off
+define TestRollo_HOCH dummy
+attr TestRollo_HOCH room Test
+attr TestRollo_HOCH webCmd on:off
+
+define TestRollo_dummy ROLLO
+attr TestRollo_dummy autoStop 0
+attr TestRollo_dummy commandDown set TestRollo_RUNTER on
+attr TestRollo_dummy commandStopDown set TestRollo_RUNTER off
+attr TestRollo_dummy commandStopUp set TestRollo_HOCH off
+attr TestRollo_dummy commandUp set TestRollo_HOCH on
+attr TestRollo_dummy devStateIcon open:fts_shutter_10:closed closed:fts_shutter_100:open half:fts_shutter_50:closed drive-up:fts_shutter_up@red:stop drive-down:fts_shutter_down@red:stop position-100:fts_shutter_100:open position-90:fts_shutter_80:closed position-80:fts_shutter_80:closed position-70:fts_shutter_70:closed position-60:fts_shutter_60:closed position-50:fts_shutter_50:closed position-40:fts_shutter_40:open position-30:fts_shutter_30:open position-20:fts_shutter_20:open position-10:fts_shutter_10:open position-0:fts_shutter_10:closed
+attr TestRollo_dummy excessBottom 1
+attr TestRollo_dummy excessTop 1
+attr TestRollo_dummy resetTime 0
+attr TestRollo_dummy room Test
+attr TestRollo_dummy secondsDown 10
+attr TestRollo_dummy secondsUp 10
+attr TestRollo_dummy switchTime 1
+attr TestRollo_dummy type normal
+attr TestRollo_dummy webCmd open:closed:half:stop:position
+
+
+define TestRollo_manuell_auf DOIF ([TestRollo_HOCH] eq "on" and [TestRollo_RUNTER] eq "on" and [TestRollo_dummy] ne "drive-up") \
+(set TestRollo_RUNTER off) \
+DOELSEIF ([TestRollo_HOCH] eq "on" and [TestRollo_dummy] ne "drive-up" and [TestRollo_dummy:drive-type] ne "modul") \
+(set TestRollo_dummy extern open) \
+DOELSEIF ([TestRollo_HOCH] eq "off" and [TestRollo_dummy] eq "drive-up" and [TestRollo_dummy:drive-type] eq "extern")\
+(set TestRollo_dummy extern stop)
+attr TestRollo_manuell_auf disable 0
+attr TestRollo_manuell_auf do always
+attr TestRollo_manuell_auf room Test
+define TestRollo_manuell_ab DOIF ([TestRollo_HOCH] eq "on" and [TestRollo_RUNTER] eq "on" and [TestRollo_dummy] ne "drive-down") \
+(set TestRollo_HOCH off) \
+DOELSEIF ([TestRollo_RUNTER] eq "on" and [TestRollo_dummy] ne "drive-down" and [TestRollo_dummy:drive-type] ne "modul") \
+(set TestRollo_dummy extern closed) \
+DOELSEIF ([TestRollo_RUNTER] eq "off" and [TestRollo_dummy] eq "drive-down" and [TestRollo_dummy:drive-type] eq "extern") \
+(set TestRollo_dummy extern stop)
+attr TestRollo_manuell_ab do always
+attr TestRollo_manuell_ab room Test
+
+define du_TestRollo_Master dummy
+attr du_TestRollo_Master alias Automatik aktiv:
+attr du_TestRollo_Master devStateIcon .*:rc_BLANK
+attr du_TestRollo_Master group Rollos Settings
+attr du_TestRollo_Master icon fts_shutter_automatic
+attr du_TestRollo_Master room Test
+attr du_TestRollo_Master setList state:an,aus
+attr du_TestRollo_Master sortby 01
+attr du_TestRollo_Master webCmd state
+
+define du_TestRollo_Art dummy
+attr du_TestRollo_Art alias Art:
+attr du_TestRollo_Art devStateIcon .*:rc_BLANK
+attr du_TestRollo_Art group Rollos Settings
+attr du_TestRollo_Art icon fts_shutter_updown
+attr du_TestRollo_Art room Test
+attr du_TestRollo_Art setList state:Normal,Urlaub,Weihnachten
+attr du_TestRollo_Art sortby 02
+attr du_TestRollo_Art webCmd state
+
+define du_TestRollo_Luminosity_ru dummy
+attr du_TestRollo_Luminosity_ru alias Helligkeit RUNTER
+attr du_TestRollo_Luminosity_ru devStateIcon .*:rc_BLANK
+attr du_TestRollo_Luminosity_ru group Rollos Settings
+attr du_TestRollo_Luminosity_ru icon fts_shutter_down
+attr du_TestRollo_Luminosity_ru room Test
+attr du_TestRollo_Luminosity_ru setList state:textField
+attr du_TestRollo_Luminosity_ru sortby 03
+attr du_TestRollo_Luminosity_ru webCmd state
+
+define TestRollo_TK dummy
+attr TestRollo_TK devStateIcon closed:fts_door@green open:fts_door_open@red tilted:fts_door_tilt@yellow
+attr TestRollo_TK room Test
+attr TestRollo_TK webCmd open:closed:tilted
+
+define di_TestRollo DOIF ([TestRollo_dummy] eq "open" and [du_TestRollo_dummy_Master] eq "an" \
+	and ([GT_ga_BM_test:brightness] < [du_TestRollo_dummy_Luminosity_ru] \
+	and [{ReadingsVal("du_TestRollo_dummy_Zeit_ru_start", "state", "22:00:00")}-{ReadingsVal("du_TestRollo_dummy_Zeit_ru_ende", "state", "22:00:00")}]) \
+	or ([TestRollo_dummy] eq "open" and [du_TestRollo_dummy_Master] eq "an" and [{ReadingsVal("du_TestRollo_dummy_Zeit_ru_ende", "state", "22:00:00")}])) \
+		(define at_TestRollo at +00:00:03 set TestRollo_dummy closed) \
+DOELSEIF ([du_TestRollo_dummy_Master] eq "an" and ([{ReadingsVal("du_TestRollo_dummy_Zeit_ho", "state", "10:00:00")}|8] \
+	or [{ReadingsVal("du_TestRollo_dummy_Zeit_ho_WE", "state", "10:00:00")}|7])) \
+	(define at_TestRollo at +00:00:03 set TestRollo_dummy open)
+attr di_TestRollo room Test
+
+define du_TestRollo_Zeit_ho dummy
+attr du_TestRollo_Zeit_ho alias Zeit HOCH:
+attr du_TestRollo_Zeit_ho devStateIcon .*:rc_BLANK
+attr du_TestRollo_Zeit_ho group Rollos Settings
+attr du_TestRollo_Zeit_ho icon icoUhr
+attr du_TestRollo_Zeit_ho room Test
+attr du_TestRollo_Zeit_ho setList state:time
+attr du_TestRollo_Zeit_ho sortby 10
+attr du_TestRollo_Zeit_ho webCmd state
+ 
+define du_TestRollo_Zeit_ho_WE dummy
+attr du_TestRollo_Zeit_ho_WE alias Zeit HOCH WE:
+attr du_TestRollo_Zeit_ho_WE devStateIcon .*:rc_BLANK
+attr du_TestRollo_Zeit_ho_WE group Rollos Settings
+attr du_TestRollo_Zeit_ho_WE icon icoUhr
+attr du_TestRollo_Zeit_ho_WE room Test
+attr du_TestRollo_Zeit_ho_WE setList state:time
+attr du_TestRollo_Zeit_ho_WE sortby 11
+attr du_TestRollo_Zeit_ho_WE webCmd state
+
+define du_TestRollo_Zeit_ru_start dummy
+attr du_TestRollo_Zeit_ru_start alias Zeit RUNTER start:
+attr du_TestRollo_Zeit_ru_start devStateIcon .*:rc_BLANK
+attr du_TestRollo_Zeit_ru_start group Rollos Settings
+attr du_TestRollo_Zeit_ru_start icon icoUhr
+attr du_TestRollo_Zeit_ru_start room Test
+attr du_TestRollo_Zeit_ru_start setList state:time
+attr du_TestRollo_Zeit_ru_start sortby 21
+attr du_TestRollo_Zeit_ru_start webCmd state
+ 
+define du_TestRollo_Zeit_ru_ende dummy
+attr du_TestRollo_Zeit_ru_ende alias Zeit RUNTER ende:
+attr du_TestRollo_Zeit_ru_ende devStateIcon .*:rc_BLANK
+attr du_TestRollo_Zeit_ru_ende group Rollos Settings
+attr du_TestRollo_Zeit_ru_ende icon icoUhr
+attr du_TestRollo_Zeit_ru_ende room Test
+attr du_TestRollo_Zeit_ru_ende setList state:time
+attr du_TestRollo_Zeit_ru_ende sortby 22
+attr du_TestRollo_Zeit_ru_ende webCmd state
+
+define GT_ga_BM_test dummy
+attr GT_ga_BM_test room Test
