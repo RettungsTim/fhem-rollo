@@ -22,10 +22,13 @@ attr TestRollo_dummy switchTime 1
 attr TestRollo_dummy type normal
 attr TestRollo_dummy webCmd open:closed:half:stop:position
 
+define TestRolloTimer WeekdayTimer Sammeldummy de 12345|12:39|open 12345|14:20|closed
+attr TestRolloTimer disable 0
+attr TestRolloTimer room Test
 
 define TestRollo_manuell_auf DOIF ([TestRollo_HOCH] eq "on" and [TestRollo_RUNTER] eq "on" and [TestRollo_dummy] ne "drive-up") \
 (set TestRollo_RUNTER off) \
-DOELSEIF ([TestRollo_HOCH] eq "on" and [TestRollo_dummy] ne "drive-up" and [TestRollo_dummy:drive-type] ne "modul") \
+DOELSEIF ([TestRollo_HOCH] eq "on" and [TestRollo_dummy] ne "drive-up" and [TestRollo_dummy:drive-type] ne "system") \
 (set TestRollo_dummy extern open) \
 DOELSEIF ([TestRollo_HOCH] eq "off" and [TestRollo_dummy] eq "drive-up" and [TestRollo_dummy:drive-type] eq "extern")\
 (set TestRollo_dummy extern stop)
@@ -34,7 +37,7 @@ attr TestRollo_manuell_auf do always
 attr TestRollo_manuell_auf room Test
 define TestRollo_manuell_ab DOIF ([TestRollo_HOCH] eq "on" and [TestRollo_RUNTER] eq "on" and [TestRollo_dummy] ne "drive-down") \
 (set TestRollo_HOCH off) \
-DOELSEIF ([TestRollo_RUNTER] eq "on" and [TestRollo_dummy] ne "drive-down" and [TestRollo_dummy:drive-type] ne "modul") \
+DOELSEIF ([TestRollo_RUNTER] eq "on" and [TestRollo_dummy] ne "drive-down" and [TestRollo_dummy:drive-type] ne "system") \
 (set TestRollo_dummy extern closed) \
 DOELSEIF ([TestRollo_RUNTER] eq "off" and [TestRollo_dummy] eq "drive-down" and [TestRollo_dummy:drive-type] eq "extern") \
 (set TestRollo_dummy extern stop)
