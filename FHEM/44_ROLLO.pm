@@ -718,7 +718,7 @@ sub ROLLO_Attr(@) {
 					<br />Zeit die beim Anfahren von Endpositionen (offen,geschlossen) der Motor zusätzlich an bleiben soll um sicherzustellen das die Endposition wirklich angefahren wurde. Dadurch können Differenzen in der Positionsberechnung korrigiert werden.</li>
 				<li><a name="rollo_reactionTime"><code>attr &lt;Rollo-Device&gt; reactionTime &lt;number&gt;</code></a> 
 					<br />Zeit für den Motor zum reagieren</li>
-				<li><a name="rollo_autoStop"><code>attr %lt;Rollo-Device&gt; autoStop [0|1]</code></a>
+				<li><a name="rollo_autoStop"><code>attr &lt;Rollo-Device&gt; autoStop [0|1]</code></a>
 					<br />Es muss kein Stop-Befehl ausgeführt werden, das Rollo stoppt von selbst.</li>
 				<li><a name="rollo_commandUp"><code>attr &lt;Rollo-Device&gt; commandUp	&lt;string&gt;</code></a>
 					<br />Es werden bis zu 3 beliebige Befehle zum hochfahren ausgeführt</li>
