@@ -26,6 +26,8 @@
 ########################################################################################
 package main;
 
+no if $] >= 5.017011, warnings => 'experimental::smartmatch';
+
 use strict;
 use warnings;
 use Data::Dumper;
