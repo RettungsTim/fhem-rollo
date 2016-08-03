@@ -120,7 +120,6 @@ sub ROLLO_Undef($) {
 sub ROLLO_Set($@) {
   my ($hash,@a) = @_;
   my $name = $hash->{NAME};
-  Log3 $name,5,"ROLLO ($name) >> Set";
 
   #allgemeine Fehler in der Parameterübergabe abfangen
   if ( @a < 2 ) {
@@ -130,8 +129,7 @@ sub ROLLO_Set($@) {
   my $cmd =  $a[1];
   my $arg = "";
   $arg = $a[2] if defined $a[2];
-
-  Log3 $name,4,"ROLLO_Set $cmd to $arg" if ($cmd ne "?");
+  Log3 $name,5,"ROLLO ($name) >> Set ($cmd,$arg)" if ($cmd ne "?");
 
   my @positionsets = ("0","10","20","30","40","50","60","70","80","90","100");
 
@@ -201,8 +199,18 @@ sub ROLLO_Set($@) {
     $desiredPos = $positions{$cmd}
   }
 
-  readingsSingleUpdate($hash,"command",$cmd,1);
-  readingsSingleUpdate($hash,"desired_position",$desiredPos,1) if($cmd ne "blocked") && ($cmd ne "stop");
+  #wenn ich gerade am fahren bin und eine neue Zielposition angefahren werden soll,
+  # muss ich jetzt erst mal meine aktuelle Position berechnen und updaten
+  # bevor ich die desired-position überschreibe!
+  if ((ReadingsVal($name,"state","") =~ /drive-/))
+  {
+	my $position = ROLLO_calculatePosition($hash,$name);
+	readingsSingleUpdate($hash,"position",$position,1);
+  }
+  readingsBeginUpdate($hash);
+  readingsBulkUpdate($hash,"command",$cmd);
+  readingsBulkUpdate($hash,"desired_position",$desiredPos) if($cmd ne "blocked") && ($cmd ne "stop");
+  readingsEndUpdate($hash,1);
 
   ROLLO_Start($hash);
   return undef;
@@ -276,7 +284,8 @@ sub ROLLO_Start($) {
   #Ich fahre ja gerade...wo bin ich aktuell?
   if ($state =~ /drive-/)
   {
-	$position = ROLLO_calculatePosition($hash,$name);
+    #das muss weg.. verschoben in set!
+	#$position = ROLLO_calculatePosition($hash,$name);
 
     if ($command eq "stop")
     {
@@ -358,6 +367,7 @@ sub ROLLO_Stop($) {
 
   Log3 $name,4,"ROLLO ($name): stops from $state at position $position";
 
+  #wenn autostop=1 und position <> 0+100 und rollo fährt, dann kein stopbefehl ausführen...
   if( ($state =~ /drive-/ && $position > 0 && $position < 100 ) || AttrVal($name, "autoStop", 0) ne 1)
   {
     my $command = AttrVal($name,'commandStop',"");
@@ -372,6 +382,8 @@ sub ROLLO_Stop($) {
       readingsSingleUpdate($hash,"drive-type","na",1);
       Log3 $name,4,"ROLLO ($name) is in drive-type extern";
     }
+  } else {
+    Log3 $name,4,"ROLLO ($name) drives to end position and autostop is enabled. No stop command executed";
   }
 
   if(ReadingsVal($name,"blocked","0") eq "1" && AttrVal($name,"blockMode","none") ne "none")
