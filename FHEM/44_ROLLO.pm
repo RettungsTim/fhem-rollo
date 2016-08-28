@@ -1,5 +1,5 @@
 ########################################################################################
-# $Id: 44_ROLLO.pm 1120 2016-07-09 21:47:00Z                                         $ #
+# $Id: 44_ROLLO.pm 1201 2016-08-28 16:53:00Z                                         $ #
 # Modul zur einfacheren Rolladensteuerung                                              #
 #                                                                                      #
 # Thomas Ramm, 2016                                                                    #
@@ -30,7 +30,7 @@ use strict;
 use warnings;
 use Data::Dumper;
 
-my $version = "1.200";
+my $version = "1.201";
 
 my %sets = (
   "open" => "noArg",
