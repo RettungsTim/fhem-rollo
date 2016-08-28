@@ -179,23 +179,25 @@ sub ROLLO_Set($@) {
   }
   my $desiredPos = $cmd;
   my $typ = AttrVal($name,"type","normal");
-  if ($cmd eq "position" && $arg ~~ @positionsets)
+  if ( grep /^$arg$/, @positionsets )
   {
-	if ($typ eq "HomeKit"){
+	if ($cmd eq "position") { 
+	  if ($typ eq "HomeKit"){
 		Log3 $name,4,"invert Position from $arg to (100-$arg)";
 		$arg = 100-$arg
-	}
-    $cmd = "position-". $arg;
-    $desiredPos = $arg;
-  }
-  elsif ($cmd ~~ @positionsets)
-  {
-  if ($typ eq "HomeKit"){
+	  }
+      $cmd = "position-". $arg;
+      $desiredPos = $arg;
+	} else {
+	  if ($typ eq "HomeKit"){
 		$cmd = 100-$cmd
+	  }
+	  $cmd = "position-". $cmd;
+      $desiredPos = $cmd;
 	}
-    $cmd = "position-". $cmd;
-    $desiredPos = $cmd;
-  } else {
+  }
+  else 
+  {
     $desiredPos = $positions{$cmd}
   }
 
