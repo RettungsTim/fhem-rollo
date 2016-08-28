@@ -1,5 +1,5 @@
 ########################################################################################
-# $Id: 44_ROLLO.pm 1200 2016-07-20 08:12:00Z                                         $ #
+# $Id: 44_ROLLO.pm 1201 2016-08-28 16:53:00Z                                         $ #
 # Modul zur einfacheren Rolladensteuerung                                              #
 #                                                                                      #
 # Thomas Ramm, 2016                                                                    #
@@ -26,13 +26,11 @@
 ########################################################################################
 package main;
 
-no if $] >= 5.017011, warnings => 'experimental::smartmatch';
-
 use strict;
 use warnings;
 use Data::Dumper;
 
-my $version = "1.200";
+my $version = "1.201";
 
 my %sets = (
   "open" => "noArg",
@@ -122,7 +120,6 @@ sub ROLLO_Undef($) {
 sub ROLLO_Set($@) {
   my ($hash,@a) = @_;
   my $name = $hash->{NAME};
-  Log3 $name,5,"ROLLO ($name) >> Set";
 
   #allgemeine Fehler in der Parameterübergabe abfangen
   if ( @a < 2 ) {
@@ -132,8 +129,7 @@ sub ROLLO_Set($@) {
   my $cmd =  $a[1];
   my $arg = "";
   $arg = $a[2] if defined $a[2];
-
-  Log3 $name,4,"ROLLO_Set $cmd to $arg" if ($cmd ne "?");
+  Log3 $name,5,"ROLLO ($name) >> Set ($cmd,$arg)" if ($cmd ne "?");
 
   my @positionsets = ("0","10","20","30","40","50","60","70","80","90","100");
 
@@ -183,28 +179,40 @@ sub ROLLO_Set($@) {
   }
   my $desiredPos = $cmd;
   my $typ = AttrVal($name,"type","normal");
-  if ($cmd eq "position" && $arg ~~ @positionsets)
+  if ( grep /^$arg$/, @positionsets )
   {
-	if ($typ eq "HomeKit"){
+	if ($cmd eq "position") { 
+	  if ($typ eq "HomeKit"){
 		Log3 $name,4,"invert Position from $arg to (100-$arg)";
 		$arg = 100-$arg
-	}
-    $cmd = "position-". $arg;
-    $desiredPos = $arg;
-  }
-  elsif ($cmd ~~ @positionsets)
-  {
-  if ($typ eq "HomeKit"){
+	  }
+      $cmd = "position-". $arg;
+      $desiredPos = $arg;
+	} else {
+	  if ($typ eq "HomeKit"){
 		$cmd = 100-$cmd
+	  }
+	  $cmd = "position-". $cmd;
+      $desiredPos = $cmd;
 	}
-    $cmd = "position-". $cmd;
-    $desiredPos = $cmd;
-  } else {
+  }
+  else 
+  {
     $desiredPos = $positions{$cmd}
   }
 
-  readingsSingleUpdate($hash,"command",$cmd,1);
-  readingsSingleUpdate($hash,"desired_position",$desiredPos,1) if($cmd ne "blocked") && ($cmd ne "stop");
+  #wenn ich gerade am fahren bin und eine neue Zielposition angefahren werden soll,
+  # muss ich jetzt erst mal meine aktuelle Position berechnen und updaten
+  # bevor ich die desired-position überschreibe!
+  if ((ReadingsVal($name,"state","") =~ /drive-/))
+  {
+	my $position = ROLLO_calculatePosition($hash,$name);
+	readingsSingleUpdate($hash,"position",$position,1);
+  }
+  readingsBeginUpdate($hash);
+  readingsBulkUpdate($hash,"command",$cmd);
+  readingsBulkUpdate($hash,"desired_position",$desiredPos) if($cmd ne "blocked") && ($cmd ne "stop");
+  readingsEndUpdate($hash,1);
 
   ROLLO_Start($hash);
   return undef;
@@ -278,7 +286,8 @@ sub ROLLO_Start($) {
   #Ich fahre ja gerade...wo bin ich aktuell?
   if ($state =~ /drive-/)
   {
-	$position = ROLLO_calculatePosition($hash,$name);
+    #das muss weg.. verschoben in set!
+	#$position = ROLLO_calculatePosition($hash,$name);
 
     if ($command eq "stop")
     {
@@ -360,6 +369,7 @@ sub ROLLO_Stop($) {
 
   Log3 $name,4,"ROLLO ($name): stops from $state at position $position";
 
+  #wenn autostop=1 und position <> 0+100 und rollo fährt, dann kein stopbefehl ausführen...
   if( ($state =~ /drive-/ && $position > 0 && $position < 100 ) || AttrVal($name, "autoStop", 0) ne 1)
   {
     my $command = AttrVal($name,'commandStop',"");
@@ -374,6 +384,8 @@ sub ROLLO_Stop($) {
       readingsSingleUpdate($hash,"drive-type","na",1);
       Log3 $name,4,"ROLLO ($name) is in drive-type extern";
     }
+  } else {
+    Log3 $name,4,"ROLLO ($name) drives to end position and autostop is enabled. No stop command executed";
   }
 
   if(ReadingsVal($name,"blocked","0") eq "1" && AttrVal($name,"blockMode","none") ne "none")
