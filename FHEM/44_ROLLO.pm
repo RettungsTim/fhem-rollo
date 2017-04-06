@@ -78,6 +78,7 @@ sub ROLLO_Initialize($) {
 	. " automatic-delay"
     . " autoStop:1,0"
 	. " type:normal,HomeKit"
+	. " forceDrive:0,1"
 	. " " . $readingFnAttributes;
 
   $hash->{stoptime} = 0;
@@ -171,8 +172,9 @@ sub ROLLO_Set($@) {
     readingsSingleUpdate($hash,"blocked","1",1);
     return if(AttrVal($name,"blockMode","none") eq "blocked");
   } elsif ($cmd eq "unblocked") {
-    ROLLO_Stop($hash);
-    readingsSingleUpdate($hash,"blocked","0",1);
+    #ROLLO_Stop($hash); 							#delete KernSani
+	readingsSingleUpdate($hash,"blocked","0",1); 
+	ROLLO_Stop($hash);								#add KernSani
     ROLLO_Start($hash);
     fhem( "deletereading $name blocked");
     return;
@@ -204,18 +206,40 @@ sub ROLLO_Set($@) {
   #wenn ich gerade am fahren bin und eine neue Zielposition angefahren werden soll,
   # muss ich jetzt erst mal meine aktuelle Position berechnen und updaten
   # bevor ich die desired-position überschreibe!
+  																								
   if ((ReadingsVal($name,"state","") =~ /drive-/))
   {
 	my $position = ROLLO_calculatePosition($hash,$name);
-	readingsSingleUpdate($hash,"position",$position,1);
+	readingsSingleUpdate($hash,"position",$position,1);																				
+	readingsSingleUpdate($hash,"desired_position",$position,1) if($cmd eq "stop" || $cmd eq "blocked");													
   }
-  readingsBeginUpdate($hash);
+  readingsBeginUpdate($hash);	
   readingsBulkUpdate($hash,"command",$cmd);
-  readingsBulkUpdate($hash,"desired_position",$desiredPos) if($cmd ne "blocked") && ($cmd ne "stop");
+  readingsBulkUpdate($hash,"desired_position",$desiredPos) if($cmd ne "blocked") && ($cmd ne "stop") && ROLLO_isAllowed($hash,$cmd,$desiredPos);							
   readingsEndUpdate($hash,1);
 
   ROLLO_Start($hash);
   return undef;
+}
+#################################################################### isAllowed #####
+sub ROLLO_isAllowed($$$) {
+  my ($hash,$cmd,$desired_position) = @_;
+  my $name = $hash->{NAME};
+  
+  if (ReadingsVal($name,"blocked","0") ne "1") {
+	return 1;
+  }
+  my $position = ReadingsVal($name,"position",undef);
+  my $blockmode = AttrVal($name,"blockMode","none");
+  Log3 $name,3,"ROLLO ($name) >> Blockmode:$blockmode $position-->$desired_position";
+  if (	$blockmode eq "blocked" ||
+		($blockmode eq "only-up" && $position <= $desired_position) ||
+		($blockmode eq "only-down" && $position >= $desired_position)
+	  )
+	  { 
+	  return undef;
+	  }
+  return 1;
 }
 
 #################################################################### START #####
@@ -335,7 +359,7 @@ sub ROLLO_Start($) {
       fhem("$command2") if ($command2 ne "");
       fhem("$command3") if ($command3 ne "");
     } else {
-      #readingsSingleUpdate($hash,"drive-type","extern",1);
+      #readingsSingleUpdate($hash,"drive-type","na",1);
       Log3 $name,4,"ROLLO ($name) drive-type is extern, not executing driving commands";
     }
 
@@ -366,10 +390,9 @@ sub ROLLO_Stop($) {
 
   my $position = ReadingsVal($name,"position",0);
   my $state = ReadingsVal($name,"state","");
-
   Log3 $name,4,"ROLLO ($name): stops from $state at position $position";
 
-  #wenn autostop=1 und position <> 0+100 und rollo fährt, dann kein stopbefehl ausführen...
+  #wenn autostop=1 und position <> 0+100 und rollo fährt, dann kein stopbefehl ausführen...  
   if( ($state =~ /drive-/ && $position > 0 && $position < 100 ) || AttrVal($name, "autoStop", 0) ne 1)
   {
     my $command = AttrVal($name,'commandStop',"");
@@ -468,22 +491,29 @@ sub ROLLO_calculateDriveTime(@) {
     $steps = $newpos-$oldpos;
   }
   if ($steps == 0) {
-    Log3 $name,4,"already at position!";
+    Log3 $name,4,"ROLLO ($name):already at position!";
+    if (AttrVal($name,"forceDrive",undef) == 1 && ($oldpos == 0 || $oldpos == 100)) {
+		Log3 $name,4,"ROLLO ($name): forceDrive set, driving $direction";
+		$steps = 100;
+	}
   }
-
+  
+  
   if(!defined($time)) {
     Log3 $name,2,"ERROR: missing attribute secondsUp or secondsDown";
     $time = 60;
   }
 
   my $drivetime = $time*$steps/100;
-  $drivetime += AttrVal($name,'reactionTime',0) if($time > 0 && $steps > 0);
+  if ($drivetime > 0) {
+	  $drivetime += AttrVal($name,'reactionTime',0) if($time > 0 && $steps > 0);
 
-  $drivetime += AttrVal($name,'excessTop',0) if($oldpos == 0 or $newpos == 0);
-  $drivetime += AttrVal($name,'excessBottom',0) if($oldpos == 100 or $newpos == 100);
-  $drivetime += AttrVal($name,'resetTime', 0) if($newpos == 0 or $newpos == 100);
+	  $drivetime += AttrVal($name,'excessTop',0) if($oldpos == 0 or $newpos == 0);
+	  $drivetime += AttrVal($name,'excessBottom',0) if($oldpos == 100 or $newpos == 100);
+	  $drivetime += AttrVal($name,'resetTime', 0) if($newpos == 0 or $newpos == 100);
+	  Log3 $name,4,"ROLLO ($name) calculateDriveTime: oldpos=$oldpos,newpos=$newpos,direction=$direction,time=$time,steps=$steps,drivetime=$drivetime";
 
-  Log3 $name,4,"ROLLO ($name) calculateDriveTime: oldpos=$oldpos,newpos=$newpos,direction=$direction,time=$time,steps=$steps,drivetime=$drivetime";
+  }
   return $drivetime;
 }
 
