@@ -172,6 +172,8 @@ sub ROLLO_Set($@) {
     readingsSingleUpdate($hash,"blocked","1",1);
     return if(AttrVal($name,"blockMode","none") eq "blocked");
   } elsif ($cmd eq "unblocked") {
+	# Wenn blocked=1 wird in Rollo_Stop der state auf "blocked" gesetzt 
+	# daher erst blocked auf 0 (Stop ist m.E. an dieser Stelle eigentlich nicht notwendig)
     #ROLLO_Stop($hash); 							#delete KernSani
 	readingsSingleUpdate($hash,"blocked","0",1); 
 	ROLLO_Stop($hash);								#add KernSani
@@ -210,11 +212,15 @@ sub ROLLO_Set($@) {
   if ((ReadingsVal($name,"state","") =~ /drive-/))
   {
 	my $position = ROLLO_calculatePosition($hash,$name);
-	readingsSingleUpdate($hash,"position",$position,1);																				
+	readingsSingleUpdate($hash,"position",$position,1);		
+	# Desired-position sollte auf aktuelle position gesetzt werden, wenn explizit gestoppt wird. 
 	readingsSingleUpdate($hash,"desired_position",$position,1) if($cmd eq "stop" || $cmd eq "blocked");													
   }
   readingsBeginUpdate($hash);	
   readingsBulkUpdate($hash,"command",$cmd);
+  # desired position sollte nicht gesetzt werden, wenn ein unerlaubter Befehl (wenn Rollladen geblockt ist)
+  # gesendet wird. Sonst rennt er direkt nach dem "unblock" los
+  # readingsBulkUpdate($hash,"desired_position",$desiredPos) if($cmd ne "blocked") && ($cmd ne "stop") 
   readingsBulkUpdate($hash,"desired_position",$desiredPos) if($cmd ne "blocked") && ($cmd ne "stop") && ROLLO_isAllowed($hash,$cmd,$desiredPos);							
   readingsEndUpdate($hash,1);
 
@@ -359,7 +365,8 @@ sub ROLLO_Start($) {
       fhem("$command2") if ($command2 ne "");
       fhem("$command3") if ($command3 ne "");
     } else {
-      #readingsSingleUpdate($hash,"drive-type","na",1);
+      #readingsSingleUpdate($hash,"drive-type","extern",1);
+	  readingsSingleUpdate($hash,"drive-type","na",1);
       Log3 $name,4,"ROLLO ($name) drive-type is extern, not executing driving commands";
     }
 
@@ -392,7 +399,7 @@ sub ROLLO_Stop($) {
   my $state = ReadingsVal($name,"state","");
   Log3 $name,4,"ROLLO ($name): stops from $state at position $position";
 
-  #wenn autostop=1 und position <> 0+100 und rollo fährt, dann kein stopbefehl ausführen...  
+  #wenn autostop=1 und position <> 0+100 und rollo fährt, dann kein stopbefehl ausführen...
   if( ($state =~ /drive-/ && $position > 0 && $position < 100 ) || AttrVal($name, "autoStop", 0) ne 1)
   {
     my $command = AttrVal($name,'commandStop',"");
@@ -492,7 +499,8 @@ sub ROLLO_calculateDriveTime(@) {
   }
   if ($steps == 0) {
     Log3 $name,4,"ROLLO ($name):already at position!";
-    if (AttrVal($name,"forceDrive",undef) == 1 && ($oldpos == 0 || $oldpos == 100)) {
+    # Wenn force-Drive gesetzt ist fahren wir immer 100% (wenn "open" oder "closed")
+	if (AttrVal($name,"forceDrive",undef) == 1 && ($oldpos == 0 || $oldpos == 100)) {
 		Log3 $name,4,"ROLLO ($name): forceDrive set, driving $direction";
 		$steps = 100;
 	}
@@ -505,6 +513,7 @@ sub ROLLO_calculateDriveTime(@) {
   }
 
   my $drivetime = $time*$steps/100;
+  # reactionTime etc... sollten nur hinzugefügt werden, wenn auch gefahren wird...
   if ($drivetime > 0) {
 	  $drivetime += AttrVal($name,'reactionTime',0) if($time > 0 && $steps > 0);
 
@@ -683,6 +692,8 @@ sub ROLLO_Attr(@) {
 					<br />if disabled the additional module ROLLO_AUTOMATIC don't drive the shutter</li>
 				<li><a name="rollo_automatic-delay"><code>attr &lt;Rollo-Device&gt; automatic-delay	&lt;number&gt;</code></a>
 					<br />if set any ROLLO_AUTOMATIC  commandy are executed delayed (in minutes)<br></li>
+				<li><a name="rollo_forceDrive"><code>attr &lt;Rollo-Device&gt; forceDrive [0|1]</code></a>
+					<br />force open/closed even if device is already in target position<br></li>
 				<li><a href="#readingFnAttributes">readingFnAttributes</a></li>
 			</ul>
 </ul>
