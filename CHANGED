@@ -1,5 +1,6 @@
-
 FHEM ROLLO last change:
-2017-03-31
- - Add Modul ROLLO_Automatik
+2018-07-21
+ - Support for command "up" and "down" added
+ - Direction calculation corrected
+ - Current shutter position inside HomeKit corrected
 
