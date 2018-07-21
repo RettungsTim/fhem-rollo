@@ -4,7 +4,8 @@
 #                                                                                      #
 # Thomas Ramm, 2016                                                                    #
 # Tim Horenkamp, 2016                                                                  #
-# Markus Moises, 2016																   #
+# Markus Moises, 2016                                                                  #
+# Mirko Lindner, 2018                                                                  #
 #                                                                                      #
 ########################################################################################
 #
@@ -28,13 +29,14 @@ package main;
 
 use strict;
 use warnings;
-use Data::Dumper;
 
-my $version = "1.201";
+my $version = "1.202";
 
 my %sets = (
   "open" => "noArg",
   "closed" => "noArg",
+  "up" => "noArg",
+  "down" => "noArg",
   "half" => "noArg",
   "stop" => "noArg",
   "blocked" => "noArg",
@@ -68,17 +70,17 @@ sub ROLLO_Initialize($) {
     . " excessTop"
     . " excessBottom"
     . " switchTime"
-	. " resetTime"
+    . " resetTime"
     . " reactionTime"
     . " blockMode:blocked,force-open,force-closed,only-up,only-down,half-up,half-down,none"
     . " commandUp commandUp2 commandUp3"
     . " commandDown commandDown2 commandDown3"
     . " commandStop commandStopDown commandStopUp"
     . " automatic-enabled:on,off"
-	. " automatic-delay"
+    . " automatic-delay"
     . " autoStop:1,0"
-	. " type:normal,HomeKit"
-	. " " . $readingFnAttributes;
+    . " type:normal,HomeKit"
+    . " " . $readingFnAttributes;
 
   $hash->{stoptime} = 0;
 
@@ -138,34 +140,33 @@ sub ROLLO_Set($@) {
     foreach my $val (keys %sets) {
         $param .= " $val:$sets{$val}";
     }
-    if ($cmd ne "?") {
-      Log3 $name,2,"ERROR: Unknown command $cmd, choose one of $param";
-    }
+
+    Log3 $name,2,"ERROR: Unknown command $cmd, choose one of $param" if ($cmd ne "?");
     return "Unknown argument $cmd, choose one of $param";
   }
 
-  if (($cmd eq "stop") && (ReadingsVal($name,"state",'') !~ /drive/))
-  {
+  if (($cmd eq "stop") && (ReadingsVal($name,"state",'') !~ /drive/)) {
     Log3 $name,3,"WARNING: command is stop but shutter is not driving!";
     RemoveInternalTimer($hash);
-	ROLLO_Stop($hash);
+    ROLLO_Stop($hash);
     return undef;
-  } 
+  }
+
   if ($cmd eq "extern") {
     readingsSingleUpdate($hash,"drive-type","extern",1);
     $cmd = $arg;
   } elsif ($cmd eq "reset") {
-	my $reset_position = $positions{$arg};
-	if (AttrVal($name,"type","normal") eq "HomeKit") {
-		$reset_position = 100-$reset_position;
-	}
+    my $reset_position = $positions{$arg};
+    $reset_position = 100-$reset_position if (AttrVal($name,"type","normal") eq "HomeKit");
+
     readingsBeginUpdate($hash);
     readingsBulkUpdate($hash,"state",$arg);
     readingsBulkUpdate($hash,"desired_position",$reset_position);
     readingsBulkUpdate($hash,"position",$reset_position);
     readingsEndUpdate($hash,1);
     return undef;
-  } 
+  }
+
   if ($cmd eq "blocked") {
     ROLLO_Stop($hash);
     readingsSingleUpdate($hash,"blocked","1",1);
@@ -177,38 +178,51 @@ sub ROLLO_Set($@) {
     fhem( "deletereading $name blocked");
     return;
   }
+
   my $desiredPos = $cmd;
   my $typ = AttrVal($name,"type","normal");
-  if ( grep /^$arg$/, @positionsets )
-  {
-	if ($cmd eq "position") { 
-	  if ($typ eq "HomeKit"){
-		Log3 $name,4,"invert Position from $arg to (100-$arg)";
-		$arg = 100-$arg
-	  }
-      $cmd = "position-". $arg;
+  if ( grep /^$arg$/, @positionsets ) {
+    if ($cmd eq "position") {
+      if ($typ eq "HomeKit"){
+        Log3 $name,4,"invert Position from $arg to (100-$arg)";
+        $arg = 100-$arg
+      }
+
+      $cmd = "position-" . $arg;
       $desiredPos = $arg;
-	} else {
-	  if ($typ eq "HomeKit"){
-		$cmd = 100-$cmd
-	  }
-	  $cmd = "position-". $cmd;
+    } else {
+      $cmd = 100-$cmd if ($typ eq "HomeKit");
+      $cmd = "position-". $cmd;
       $desiredPos = $cmd;
-	}
-  }
-  else 
-  {
-    $desiredPos = $positions{$cmd}
+    }
+  } else {
+    if ($cmd eq "down" || $cmd eq "up") {
+      # Recalculate the desired position
+      my $posin = ReadingsVal($name,"position",0);
+      $posin = 100-$posin if ($typ eq "HomeKit");
+      $desiredPos = int(($posin-10)/10+0.5)*10;
+      $desiredPos = int(($posin+10)/10+0.5)*10 if $cmd eq "down";
+      $desiredPos = 100 if $desiredPos > 100;
+      $desiredPos = 0 if $desiredPos < 0;
+      Log3 $name,4,">>>>>>>>>>>>>>>>$posin<<<< >>>$desiredPos<<<<";
+    } else {
+      $desiredPos = $positions{$cmd};
+    }
+
+    Log3 $name,4,"ROLLO ($name) set desired position $desiredPos";
   }
 
   #wenn ich gerade am fahren bin und eine neue Zielposition angefahren werden soll,
   # muss ich jetzt erst mal meine aktuelle Position berechnen und updaten
   # bevor ich die desired-position überschreibe!
-  if ((ReadingsVal($name,"state","") =~ /drive-/))
-  {
-	my $position = ROLLO_calculatePosition($hash,$name);
-	readingsSingleUpdate($hash,"position",$position,1);
+  if ((ReadingsVal($name,"state","") =~ /drive-/)) {
+    my $position = ROLLO_calculatePosition($hash,$name);
+
+    # pld: Not needed. Done already inside ROLLO_calculatePosition()
+    # $position = 100-$position if $typ eq "HomeKit";
+    # readingsSingleUpdate($hash,"position",$position,1);
   }
+
   readingsBeginUpdate($hash);
   readingsBulkUpdate($hash,"command",$cmd);
   readingsBulkUpdate($hash,"desired_position",$desiredPos) if($cmd ne "blocked") && ($cmd ne "stop");
@@ -227,53 +241,36 @@ sub ROLLO_Start($) {
   my $command = ReadingsVal($name,"command","stop");
   my $desired_position = ReadingsVal($name,"desired_position",100);
   my $position = ReadingsVal($name,"position",0);
+  $position = 100-$position if (AttrVal($name,"type","normal") eq "HomeKit");
   my $state = ReadingsVal($name,"state","open");
 
   Log3 $name,4,"ROLLO ($name) drive from $position to $desired_position. command: $command. state: $state";
 
-  if(ReadingsVal($name,"blocked","0") eq "1" && $command ne "stop")
-  {
+  if(ReadingsVal($name,"blocked","0") eq "1" && $command ne "stop") {
     my $blockmode = AttrVal($name,"blockMode","none");
     Log3 $name,4,"block mode: $blockmode - $position to $desired_position?";
 
-    if($blockmode eq "blocked")
-    {
+    if($blockmode eq "blocked") {
       readingsSingleUpdate($hash,"state","blocked",1);
       return;
-    }
-    elsif($blockmode eq "force-open")
-    {
+    } elsif($blockmode eq "force-open") {
       $desired_position = 0;
-    }
-    elsif($blockmode eq "force-closed")
-    {
+    } elsif($blockmode eq "force-closed") {
       $desired_position = 100;
-    }
-    elsif($blockmode eq "only-up" && $position <= $desired_position)
-    {
+    } elsif($blockmode eq "only-up" && $position <= $desired_position) {
       readingsSingleUpdate($hash,"state","blocked",1);
       return;
-    }
-    elsif($blockmode eq "only-down" && $position >= $desired_position)
-    {
+    } elsif($blockmode eq "only-down" && $position >= $desired_position) {
       readingsSingleUpdate($hash,"state","blocked",1);
       return;
-    }
-    elsif($blockmode eq "half-up" && $desired_position < 50)
-    {
+    } elsif($blockmode eq "half-up" && $desired_position < 50) {
       $desired_position = 50;
-    }
-    elsif($blockmode eq "half-up" && $desired_position == 50)
-    {
+    } elsif($blockmode eq "half-up" && $desired_position == 50) {
       readingsSingleUpdate($hash,"state","blocked",1);
       return;
-    }
-    elsif($blockmode eq "half-down" && $desired_position > 50)
-    {
+    } elsif($blockmode eq "half-down" && $desired_position > 50) {
       $desired_position = 50;
-    }
-    elsif($blockmode eq "half-down" && $desired_position == 50)
-    {
+    } elsif($blockmode eq "half-down" && $desired_position == 50) {
       readingsSingleUpdate($hash,"state","blocked",1);
       return;
     }
@@ -284,32 +281,27 @@ sub ROLLO_Start($) {
   Log3 $name,4,"ROLLO ($name) position: $position -> $desired_position / direction: $direction";
 
   #Ich fahre ja gerade...wo bin ich aktuell?
-  if ($state =~ /drive-/)
-  {
-    #das muss weg.. verschoben in set!
-	#$position = ROLLO_calculatePosition($hash,$name);
+  if ($state =~ /drive-/) {
+    #$position = ROLLO_calculatePosition($hash,$name); #das muss weg.. verschoben in set!
 
-    if ($command eq "stop")
-    {
-	  ROLLO_Stop($hash);
+    if ($command eq "stop") {
+      ROLLO_Stop($hash);
       return;
     }
 
     $direction = "down";
     $direction = "up" if ($position > $desired_position || $desired_position == 0);
-    if ( (($state eq "drive-down") && ($direction eq "up")) || (($state eq "drive-up") && ($direction eq "down")) )
-    {
+    if ((($state eq "drive-down") && ($direction eq "up")) || (($state eq "drive-up") && ($direction eq "down"))) {
       Log3 $name,3,"driving into wrong direction. stop and change driving direction";
       ROLLO_Stop($hash);
       InternalTimer(int(gettimeofday())+AttrVal($name,'switchTime',0) , "ROLLO_Start", $hash, 0);
       return;
     }
   }
-  
+
   RemoveInternalTimer($hash);
   my $time = ROLLO_calculateDriveTime($name,$position,$desired_position,$direction);
-  if ($time > 0)
-  {
+  if ($time > 0) {
     my ($command1,$command2,$command3);
     if($direction eq "down") {
       $command1 = AttrVal($name,'commandDown',"");
@@ -320,17 +312,18 @@ sub ROLLO_Start($) {
       $command2 = AttrVal($name,'commandUp2',"");
       $command3 = AttrVal($name,'commandUp3',"");
     }
-	
-	$command = "drive-" . $direction;
+
+    $command = "drive-" . $direction;
     readingsBeginUpdate($hash);
     readingsBulkUpdate($hash,"last_drive",$command);
     readingsBulkUpdate($hash,"state",$command);
     readingsEndUpdate($hash,1);
-	
+
     #***** ROLLO NICHT LOSFAHREN WENN SCHON EXTERN GESTARTET *****#
     if (ReadingsVal($name,"drive-type","undef") ne "extern") {
-	  Log3 $name,4,"ROLLO ($name) execute following commands: $command1; $command2; $command3";
-	  readingsSingleUpdate($hash,"drive-type","modul",1);
+      Log3 $name,4,"ROLLO ($name) execute following commands: $command1; $command2; $command3";
+      readingsSingleUpdate($hash,"drive-type","modul",1);
+
       fhem("$command1") if ($command1 ne "");
       fhem("$command2") if ($command2 ne "");
       fhem("$command3") if ($command3 ne "");
@@ -343,16 +336,21 @@ sub ROLLO_Start($) {
     InternalTimer($hash->{stoptime}, "ROLLO_Timer", $hash, 1);
     Log3 $name,4,"ROLLO ($name) stop in $time seconds.";
   }
+
   return undef;
 }
+
 sub ROLLO_Timer($) {
   my ($hash) = @_;
   my $name = $hash->{NAME};
   Log3 $name,5,"ROLLO ($name) >> Timer";
-  
+
   my $position = ReadingsVal($name,"desired_position",0);
-  readingsSingleUpdate($hash,"position",$position,0);
+  $position = 100-$position if (AttrVal($name,"type","normal") eq "HomeKit");
+
+  readingsSingleUpdate($hash,"position",$position, 1);
   ROLLO_Stop($hash);
+
   return undef;
 }
 
@@ -363,15 +361,14 @@ sub ROLLO_Stop($) {
   Log3 $name,5,"ROLLO ($name) >> Stop";
 
   RemoveInternalTimer($hash);
-
   my $position = ReadingsVal($name,"position",0);
+  $position = 100-$position if (AttrVal($name,"type","normal") eq "HomeKit");
   my $state = ReadingsVal($name,"state","");
 
   Log3 $name,4,"ROLLO ($name): stops from $state at position $position";
 
   #wenn autostop=1 und position <> 0+100 und rollo fährt, dann kein stopbefehl ausführen...
-  if( ($state =~ /drive-/ && $position > 0 && $position < 100 ) || AttrVal($name, "autoStop", 0) ne 1)
-  {
+  if( ($state =~ /drive-/ && $position > 0 && $position < 100 ) || AttrVal($name, "autoStop", 0) ne 1) {
     my $command = AttrVal($name,'commandStop',"");
     $command = AttrVal($name,'commandStopUp',"") if(defined($attr{$name}{commandStopUp}));
     $command = AttrVal($name,'commandStopDown',"") if(defined($attr{$name}{commandStopDown}) && $state eq "drive-down");
@@ -379,7 +376,7 @@ sub ROLLO_Stop($) {
     # NUR WENN NICHT BEREITS EXTERN GESTOPPT
     if (ReadingsVal($name,"drive-type","undef") ne "extern") {
       fhem("$command") if ($command ne "");
-	  Log3 $name,4,"ROLLO ($name) stopped by excute the command: $command";
+      Log3 $name,4,"ROLLO ($name) stopped by excute the command: $command";
     } else {
       readingsSingleUpdate($hash,"drive-type","na",1);
       Log3 $name,4,"ROLLO ($name) is in drive-type extern";
@@ -388,30 +385,26 @@ sub ROLLO_Stop($) {
     Log3 $name,4,"ROLLO ($name) drives to end position and autostop is enabled. No stop command executed";
   }
 
-  if(ReadingsVal($name,"blocked","0") eq "1" && AttrVal($name,"blockMode","none") ne "none")
-  {
+  if(ReadingsVal($name,"blocked","0") eq "1" && AttrVal($name,"blockMode","none") ne "none") {
     readingsSingleUpdate($hash,"state","blocked",1);
-  }
-  else
-  {
+  } else {
     #Runden der Position auf volle 10%-Schritte für das Icon
     my $newpos = int($position/10+0.5)*10;
     $newpos = 0 if($newpos < 0);
     $newpos = 100 if ($newpos > 100);
-	my $state;
-	#position in text umwandeln
-	my %rhash = reverse %positions;
-    if (defined($rhash{$newpos}))
-    {
+
+    my $state;
+    #position in text umwandeln
+    my %rhash = reverse %positions;
+
+    if (defined($rhash{$newpos})) {
+			#ich kenne keinen Text für die Position, also als position-nn anzeigen
       $state = $rhash{$newpos};
-	#ich kenne keinen Text für die Position, also als position-nn anzeigen
-	} else {
-		#wenn ich die Position als Zahl anzeige muss ich sie bei HomeKit noch schnell umwandeln
-		if (AttrVal($name,"type","normal") eq "HomeKit"){
-			$newpos = 100-$newpos
-		}
-		$state = "position-$newpos";
-	}
+    } else {
+      $newpos = 100-$newpos if (AttrVal($name,"type","normal") eq "HomeKit");
+      $state = "position-$newpos";
+    }
+
     readingsSingleUpdate($hash,"state",$state,1);
   }
 
@@ -423,7 +416,10 @@ sub ROLLO_calculatePosition(@) {
   my ($position);
   Log3 $name,5,"ROLLO ($name) >> calculatePosition";
 
+  my $type = AttrVal($name,"type","normal");
   my $start = ReadingsVal($name,"position",100);
+  $start = 100-$start if $type eq "HomeKit";
+
   my $end   = ReadingsVal($name,"desired_position",0);
   my $drivetime_rest  = int($hash->{stoptime}-gettimeofday()); #die noch zu fahrenden Sekunden
   my $drivetime_total = ($start < $end) ? AttrVal($name,'secondsDown',undef) : AttrVal($name,'secondsUp',undef);
@@ -431,7 +427,7 @@ sub ROLLO_calculatePosition(@) {
   # bsp: die fahrzeit von 0->100 ist 26sec. ich habe noch 6sec. zu fahren...was bedeutet das?
   # excessTop    = 5sec
   # driveTimeDown=20sec -> hier wird von 0->100 gezählt, also pro sekunde 5 Schritte
-  # excessBottom = 1sec  
+  # excessBottom = 1sec
   # aktuelle Position = 6sec-1sec=5sec positionsfahrzeit=25steps=Position75
 
   #Frage1: habe ich noch "tote" Sekunden vor mir wegen endposition?
@@ -440,7 +436,7 @@ sub ROLLO_calculatePosition(@) {
   $drivetime_rest -= (AttrVal($name,'excessBottom',0) + $resetTime) if($end == 100);
   #wenn ich schon in der nachlaufzeit war, setze ich die Position auf 99, dann kann man nochmal für die nachlaufzeit starten
   if ($start == $end) {
-	 $position = $end;
+    $position = $end;
   } elsif ($drivetime_rest < 0) {
      $position = ($start < $end) ? 99 : 1;
   } else {
@@ -449,9 +445,13 @@ sub ROLLO_calculatePosition(@) {
     $position = 0 if($position < 0);
     $position = 100 if($position > 100);
   }
-  Log3 $name,4,"ROLLO ($name) calculated Position is $position; rest drivetime is $drivetime_rest";
+
   #aktuelle Position aktualisieren und zurückgeben
-  readingsSingleUpdate($hash,"position",$position,100);
+  Log3 $name,4,"ROLLO ($name) calculated Position is $position; rest drivetime is $drivetime_rest";
+  my $savepos = $position;
+  $savepos = 100-$position if $type eq "HomeKit";
+  readingsSingleUpdate($hash,"position",$savepos,100);
+
   return $position;
 }
 #****************************************************************************
@@ -467,9 +467,8 @@ sub ROLLO_calculateDriveTime(@) {
     $time = AttrVal($name,'secondsDown',undef);
     $steps = $newpos-$oldpos;
   }
-  if ($steps == 0) {
-    Log3 $name,4,"already at position!";
-  }
+
+  Log3 $name,4,"already at position!" if ($steps == 0);
 
   if(!defined($time)) {
     Log3 $name,2,"ERROR: missing attribute secondsUp or secondsDown";
@@ -488,7 +487,6 @@ sub ROLLO_calculateDriveTime(@) {
 }
 
 ################################################################### GET #####
-#
 sub ROLLO_Get($@) {
   my ($hash, @a) = @_;
   my $name = $hash->{NAME};
@@ -509,15 +507,13 @@ sub ROLLO_Get($@) {
     Log3 $name,3,"ERROR: Unknown argument $cmd, choose one of " . join(" ", @cList) if ($cmd ne "?");
     return "Unknown argument $cmd, choose one of " . join(" ", @cList);
   }
+
   my $val = "";
-  if (@a > 2) {
-    $val = $a[2];
-  }
+  $val = $a[2] if (@a > 2);
   Log3 $name,4,"ROLLO ($name) command: $cmd, value: $val";
 }
 
 ################################################################## ATTR #####
-#
 sub ROLLO_Attr(@) {
   my ($cmd,$name,$aName,$aVal) = @_;
   Log3 $name,5,"ROLLO ($name) >> Attr";
@@ -527,24 +523,20 @@ sub ROLLO_Attr(@) {
       eval { qr/$aVal/ };
       if ($@) {
         Log3 $name, 2, "ROLLO ($name):ERROR Invalid regex in attr $name $aName $aVal: $@";
-	return "Invalid Regex $aVal";
+        return "Invalid Regex $aVal";
       }
     }
-	#Auswertung von HomeKit und dem Logo
-	if ($aName eq "type")
-	{
-		#auslesen des aktuellen Icon, wenn es nicht gesetzt ist, oder dem default entspricht, dann neue Zuweisung vornehmen
-		my $iconNormal  = 'open:fts_shutter_10:closed closed:fts_shutter_100:open half:fts_shutter_50:closed drive-up:fts_shutter_up@red:stop drive-down:fts_shutter_down@red:stop position-100:fts_shutter_100:open position-90:fts_shutter_80:closed position-80:fts_shutter_80:closed position-70:fts_shutter_70:closed position-60:fts_shutter_60:closed position-50:fts_shutter_50:closed position-40:fts_shutter_40:open position-30:fts_shutter_30:open position-20:fts_shutter_20:open position-10:fts_shutter_10:open position-0:fts_shutter_10:closed';
-		my $iconHomeKit = 'open:fts_shutter_10:closed closed:fts_shutter_100:open half:fts_shutter_50:closed drive-up:fts_shutter_up@red:stop drive-down:fts_shutter_down@red:stop position-100:fts_shutter_10:open position-90:fts_shutter_10:closed position-80:fts_shutter_20:closed position-70:fts_shutter_30:closed position-60:fts_shutter_40:closed position-50:fts_shutter_50:closed position-40:fts_shutter_60:open position-30:fts_shutter_70:open position-20:fts_shutter_80:open position-10:fts_shutter_90:open position-0:fts_shutter_100:closed';
-		my $iconAktuell = AttrVal($name,"devStateIcon","kein");
-		if (($aVal eq "HomeKit") && (($iconAktuell eq $iconNormal) || ($iconAktuell eq "kein"))) {
-			fhem("attr $name devStateIcon $iconHomeKit");
-		}
-		if (($aVal eq "normal") && (($iconAktuell eq $iconHomeKit) || ($iconAktuell eq "kein"))) {
-			fhem("attr $name devStateIcon $iconNormal");
-		}
-	}
 
+    #Auswertung von HomeKit und dem Logo
+    if ($aName eq "type") {
+      #auslesen des aktuellen Icon, wenn es nicht gesetzt ist, oder dem default entspricht, dann neue Zuweisung vornehmen
+      my $iconNormal  = 'open:fts_shutter_10:closed closed:fts_shutter_100:open half:fts_shutter_50:closed drive-up:fts_shutter_up@red:stop drive-down:fts_shutter_down@red:stop position-100:fts_shutter_100:open position-90:fts_shutter_80:closed position-80:fts_shutter_80:closed position-70:fts_shutter_70:closed position-60:fts_shutter_60:closed position-50:fts_shutter_50:closed position-40:fts_shutter_40:open position-30:fts_shutter_30:open position-20:fts_shutter_20:open position-10:fts_shutter_10:open position-0:fts_shutter_10:closed';
+      my $iconHomeKit = 'open:fts_shutter_10:closed closed:fts_shutter_100:open half:fts_shutter_50:closed drive-up:fts_shutter_up@red:stop drive-down:fts_shutter_down@red:stop position-100:fts_shutter_10:open position-90:fts_shutter_10:closed position-80:fts_shutter_20:closed position-70:fts_shutter_30:closed position-60:fts_shutter_40:closed position-50:fts_shutter_50:closed position-40:fts_shutter_60:open position-30:fts_shutter_70:open position-20:fts_shutter_80:open position-10:fts_shutter_90:open position-0:fts_shutter_100:closed';
+      my $iconAktuell = AttrVal($name,"devStateIcon","kein");
+
+      fhem("attr $name devStateIcon $iconHomeKit") if (($aVal eq "HomeKit") && (($iconAktuell eq $iconNormal) || ($iconAktuell eq "kein")));
+      fhem("attr $name devStateIcon $iconNormal") if (($aVal eq "normal") && (($iconAktuell eq $iconHomeKit) || ($iconAktuell eq "kein")));
+    }
   }
   return undef;
 }
@@ -557,7 +549,7 @@ sub ROLLO_Attr(@) {
 <a name="ROLLO"></a>
 <h3>ROLLO</h3>
 <ul>
-<p>The module ROLLO offers easy away to steer the shutter with one or two relays and to stop point-exactly. <br> 
+<p>The module ROLLO offers easy away to steer the shutter with one or two relays and to stop point-exactly. <br>
 			Moreover, the topical position is illustrated in fhem. About which hardware the exits are appealed, besides, makes no difference. <br />
 			<h4>Example</h4>
 			<p>
@@ -566,7 +558,7 @@ sub ROLLO_Attr(@) {
 			</p><a name="ROLLO_Define"></a>
 			<h4>Define</h4>
 			<p>
-				<code>define &lt;Rollo-Device&gt; ROLLO</code> 
+				<code>define &lt;Rollo-Device&gt; ROLLO</code>
 				<br /><br /> Define a ROLLO instance.<br />
 			</p>
 			 <a name="ROLLO_Set"></a>
@@ -577,13 +569,19 @@ sub ROLLO_Attr(@) {
 						opens the shutter (Position 0) </li>
 				<li><a name="rollo_closed">
 						<code>set &lt;Rollo-Device&gt; closed</code></a><br />
-						close the shutter (Position 100) </li>		
+						close the shutter (Position 100) </li>
+				<li><a name="rollo_up">
+						<code>set &lt;Rollo-Device&gt; up</code></a><br />
+						opens the shutter one step (Position +10) </li>
+				<li><a name="rollo_down">
+						<code>set &lt;Rollo-Device&gt; down</code></a><br />
+						close the shutter one step (Position -10) </li>
 				<li><a name="rollo_half">
 						<code>set &lt;Rollo-Device&gt; half</code></a><br />
-						drive the shutter to half open (Position 50) </li>						
+						drive the shutter to half open (Position 50) </li>
 				<li><a name="rollo_stop">
 						<code>set &lt;Rollo-Device&gt; stop</code></a><br />
-						stop a driving shutter</li>						
+						stop a driving shutter</li>
 				<li><a name="rollo_blocked">
 						<code>set &lt;Rollo-Device&gt; blocked</code></a><br />
 						when activated, the shutter can moved only restricted. See attribute block_mode for further details.</li>
@@ -592,13 +590,13 @@ sub ROLLO_Attr(@) {
 						unblock the shutter, so you can drive the shutter</li>
 				<li><a name="rollo_position">
 						<code>set &lt;Rollo-Device&gt; position &lt;value&gt;</code></a><br />
-						drive the shutter to exact position from 0 (open) to 100 (closed) </li> 
+						drive the shutter to exact position from 0 (open) to 100 (closed) </li>
 				<li><a name="rollo_reset">
 						<code>set &lt;Rollo-Device&gt; reset &lt;value&gt;</code></a><br />
-						set the modul to real position if the shutter position changed outside from fhem</li> 
+						set the modul to real position if the shutter position changed outside from fhem</li>
 				<li><a name="rollo_extern">
 						<code>set &lt;Rollo-Device&gt; extern &lt;value&gt;</code></a><br />
-						if the shutter is started/stopped externaly, you can inform the modul so it can calculate the current position</li> 
+						if the shutter is started/stopped externaly, you can inform the modul so it can calculate the current position</li>
 			</ul>
 			<a name="ROLLO_Get"></a>
 			<h4>Get</h4>
@@ -625,18 +623,18 @@ sub ROLLO_Attr(@) {
 					<br />time for the shutter to switch from one driving direction to other driving direction</li>
 				<li><a name="rollo_resetTime"><code>attr &lt;Rollo-Device&gt; resetTime	&lt;number&gt;</code></a>
 					<br />additional time the shutter remain in driving state if driving to final positions (open, closed), to ensure that the final position was really approached. So difference in the position calculation can be corrected.</li>
-				<li><a name="rollo_reactionTime"><code>attr &lt;Rollo-Device&gt; reactionTime &lt;number&gt;</code></a> 
+				<li><a name="rollo_reactionTime"><code>attr &lt;Rollo-Device&gt; reactionTime &lt;number&gt;</code></a>
 					<br />additional time the shutter need to start (from start command to realy starting the motor)</li>
 				<li><a name="rollo_autoStop"><code>attr &lt;Rollo-Device&gt; autoStop [0|1]</code></a>
 					<br />It must be carried out no stop command, the shutter stops by itself.</li>
 				<li><a name="rollo_commandUp"><code>attr &lt;Rollo-Device&gt; commandUp &lt;string&gt;</code></a>
 					<br />Up to three commands you have to send to drive the shutter up</li>
 				<li><a name="rollo_commandDown"><code>attr &lt;Rollo-Device&gt; commandDown &lt;string&gt;</code></a>
-					<br />Up to three commandy you have to send to drive the shutter down</li>					
+					<br />Up to three commandy you have to send to drive the shutter down</li>
 				<li><a name="rollo_commandStop"><code>attr &lt;Rollo-Device&gt; commandStop &lt;string&gt;</code></a>
-					<br />command to stop a driving shutter</li>					
+					<br />command to stop a driving shutter</li>
 				<li><a name="rollo_commandStopDown"><code>attr &lt;Rollo-Device&gt; commandStopDown &lt;string&gt;</code></a>
-					<br />command to stop a down driving shutter, if not set commandStop is executed</li>					
+					<br />command to stop a down driving shutter, if not set commandStop is executed</li>
 				<li><a name="rollo_commandStopUp"><code>attr &lt;Rollo-Device&gt; commandStopUp &lt;string&gt;</code></a>
 					<br />command to stop a up driving shutter, if not set commandStop is executed</li>
 				<li><a name="rollo_blockMode"><code>attr &lt;Rollo-Device&gt; blockMode [blocked|force-open|force-closed|only-up|only-down|half-up|half-down|none]</code></a>
@@ -663,7 +661,7 @@ sub ROLLO_Attr(@) {
 <a name="ROLLO"></a>
 <h3>ROLLO</h3>
 <ul>
-			<p>Das Modul ROLLO bietet eine einfache Moeglichkeit, mit ein bis zwei Relais den Hoch-/Runterlauf eines Rolladen zu steuern und punktgenau anzuhalten.<br> 
+			<p>Das Modul ROLLO bietet eine einfache Moeglichkeit, mit ein bis zwei Relais den Hoch-/Runterlauf eines Rolladen zu steuern und punktgenau anzuhalten.<br>
 			Ausserdem wird die aktuelle Position in fhem abgebildet. Ueber welche Hardware/Module die Ausgaenge angesprochen werden ist dabei egal.<br /><h4>Example</h4>
 			<p>
 				<code>define TestRollo ROLLO</code>
@@ -671,7 +669,7 @@ sub ROLLO_Attr(@) {
 			</p><a name="ROLLO_Define"></a>
 			<h4>Define</h4>
 			<p>
-				<code>define &lt;Rollo-Device&gt; ROLLO</code> 
+				<code>define &lt;Rollo-Device&gt; ROLLO</code>
 				<br /><br /> Defination eines Rollos.<br />
 			</p>
 			 <a name="ROLLO_Set"></a>
@@ -682,13 +680,19 @@ sub ROLLO_Attr(@) {
 						Faehrt das Rollo komplett auf (Position 0) </li>
 				<li><a name="rollo_closed">
 						<code>set &lt;Rollo-Device&gt; closed</code></a><br />
-						Faehrt das Rollo komplett zu (Position 100) </li>		
+						Faehrt das Rollo komplett zu (Position 100) </li>
+				<li><a name="rollo_up">
+						<code>set &lt;Rollo-Device&gt; up</code></a><br />
+						Faehrt das Rollo um 10 auf (Position +10) </li>
+				<li><a name="rollo_down">
+						<code>set &lt;Rollo-Device&gt; down</code></a><br />
+						Faehrt das Rollo um 10 zu (Position -10) </li>
 				<li><a name="rollo_half">
 						<code>set &lt;Rollo-Device&gt; half</code></a><br />
-						Faehrt das Rollo zur haelfte runter bzw. hoch (Position 50) </li>						
+						Faehrt das Rollo zur haelfte runter bzw. hoch (Position 50) </li>
 				<li><a name="rollo_stop">
 						<code>set &lt;Rollo-Device&gt; stop</code></a><br />
-						Stoppt das Rollo</li>						
+						Stoppt das Rollo</li>
 				<li><a name="rollo_blocked">
 						<code>set &lt;Rollo-Device&gt; blocked</code></a><br />
 						Erklaerung folgt</li>
@@ -697,13 +701,13 @@ sub ROLLO_Attr(@) {
 						Erklaerung folgt</li>
 				<li><a name="rollo_position">
 						<code>set &lt;Rollo-Device&gt; position &lt;value&gt;</code></a><br />
-						Faehrt das Rollo auf eine beliebige Position zwischen 0 (offen) - 100 (geschlossen) </li> 
+						Faehrt das Rollo auf eine beliebige Position zwischen 0 (offen) - 100 (geschlossen) </li>
 				<li><a name="rollo_reset">
 						<code>set &lt;Rollo-Device&gt; reset &lt;value&gt;</code></a><br />
-						Sagt dem Modul in welcher Position sich der Rollo befindet</li> 
+						Sagt dem Modul in welcher Position sich der Rollo befindet</li>
 				<li><a name="rollo_extern">
 						<code>set &lt;Rollo-Device&gt; extern &lt;value&gt;</code></a><br />
-						Der Software mitteilen das gerade Befehl X bereits ausgeführt wurde und nun z.B,. das berechnen der aktuellen Position gestartet werden soll</li> 
+						Der Software mitteilen das gerade Befehl X bereits ausgeführt wurde und nun z.B,. das berechnen der aktuellen Position gestartet werden soll</li>
 			</ul>
 			<a name="ROLLO_Get"></a>
 			<h4>Get</h4>
@@ -730,18 +734,18 @@ sub ROLLO_Attr(@) {
 					<br />Zeit die zwischen 2 gegensätzlichen Laufbefehlen pausiert werden soll, also wenn der Rollo z.B. gerade runter fährt und ich den Befehl gebe hoch zu fahren, dann soll 1 sekunde gewartet werden bis der Motor wirklich zum stillstand kommt, bevor es wieder in die andere Richtung weiter geht. Dies ist die einzige Zeit die nichts mit der eigentlichen Laufzeit des Motors zu tun hat, sondern ein timer zwischen den Laufzeiten.</li>
 				<li><a name="rollo_resetTime"><code>attr &lt;Rollo-Device&gt; resetTime	&lt;number&gt;</code></a>
 					<br />Zeit die beim Anfahren von Endpositionen (offen,geschlossen) der Motor zusätzlich an bleiben soll um sicherzustellen das die Endposition wirklich angefahren wurde. Dadurch können Differenzen in der Positionsberechnung korrigiert werden.</li>
-				<li><a name="rollo_reactionTime"><code>attr &lt;Rollo-Device&gt; reactionTime &lt;number&gt;</code></a> 
+				<li><a name="rollo_reactionTime"><code>attr &lt;Rollo-Device&gt; reactionTime &lt;number&gt;</code></a>
 					<br />Zeit für den Motor zum reagieren</li>
 				<li><a name="rollo_autoStop"><code>attr &lt;Rollo-Device&gt; autoStop [0|1]</code></a>
 					<br />Es muss kein Stop-Befehl ausgeführt werden, das Rollo stoppt von selbst.</li>
 				<li><a name="rollo_commandUp"><code>attr &lt;Rollo-Device&gt; commandUp	&lt;string&gt;</code></a>
 					<br />Es werden bis zu 3 beliebige Befehle zum hochfahren ausgeführt</li>
 				<li><a name="rollo_commandDown"><code>attr &lt;Rollo-Device&gt; commandDown	&lt;string&gt;</code></a>
-					<br />Es werden bis zu 3 beliebige Befehle zum runterfahren ausgeführt</li>					
+					<br />Es werden bis zu 3 beliebige Befehle zum runterfahren ausgeführt</li>
 				<li><a name="rollo_commandStop"><code>attr &lt;Rollo-Device&gt; commandStop	&lt;string&gt;</code></a>
-					<br />Befehl der zum Stoppen ausgeführt wird, sofern nicht commandStopDown bzw. commandStopUp definiert sind</li>					
+					<br />Befehl der zum Stoppen ausgeführt wird, sofern nicht commandStopDown bzw. commandStopUp definiert sind</li>
 				<li><a name="rollo_commandStopDown"><code>attr &lt;Rollo-Device&gt; commandStopDown	&lt;string&gt;</code></a>
-					<br />Befehl der zum stoppen ausgeführt wird, wenn der Rollo gerade herunterfährt. Wenn nicht definiert wird commandStop ausgeführt</li>					
+					<br />Befehl der zum stoppen ausgeführt wird, wenn der Rollo gerade herunterfährt. Wenn nicht definiert wird commandStop ausgeführt</li>
 				<li><a name="rollo_commandStopUp"><code>attr &lt;Rollo-Device&gt; commandStopUp	&lt;string&gt;</code></a>
 					<br />Befehl der zum Stoppen ausgeführt wird,wenn der Rollo gerade hochfährt. Wenn nicht definiert wird commandStop ausgeführt</li>
 				<li><a name="rollo_blockMode"><code>attr &lt;Rollo-Device&gt; blockMode [blocked|force-open|force-closed|only-up|only-down|half-up|half-down|none]</code></a>
@@ -758,7 +762,7 @@ sub ROLLO_Attr(@) {
 					<br />Wenn auf off gestellt, haben Befehle über Modul ROLLO_Automatic keine Auswirkungen auf diesen Rollo</li>
 				<li><a name="rollo_automatic-delay"><code>attr &lt;Rollo-Device&gt; automatic-delay	&lt;number&gt;</code></a>
 					<br />Dieses Attribut wird nur fuer die Modulerweiterung ROLLADEN_Automatic benoetigt.<br>
-					Hiermit kann einge Zeitverzoegerund fuer den Rolladen eingestellt werden, werden die Rolladen per Automatic heruntergefahren, so wird dieser um die angegebenen minuten spaeter heruntergefahren. 
+					Hiermit kann einge Zeitverzoegerund fuer den Rolladen eingestellt werden, werden die Rolladen per Automatic heruntergefahren, so wird dieser um die angegebenen minuten spaeter heruntergefahren.
 					</li>
 				<li><a href="#readingFnAttributes">readingFnAttributes</a></li>
 			</ul>
