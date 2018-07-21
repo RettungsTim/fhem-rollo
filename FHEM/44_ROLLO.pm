@@ -360,8 +360,8 @@ sub ROLLO_Timer($) {
   my $position = ReadingsVal($name,"desired_position",0);
   $position = 100-$position if (AttrVal($name,"type","normal") eq "HomeKit");
 
-  readingsSingleUpdate($hash,"position",$position, 0);
-	ROLLO_Stop($hash);
+  readingsSingleUpdate($hash,"position",$position, 1);
+  ROLLO_Stop($hash);
 
   return undef;
 }
