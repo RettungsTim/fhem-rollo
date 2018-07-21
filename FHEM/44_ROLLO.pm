@@ -35,6 +35,8 @@ my $version = "1.202";
 my %sets = (
   "open" => "noArg",
   "closed" => "noArg",
+  "up" => "noArg",
+  "down" => "noArg",
   "half" => "noArg",
   "stop" => "noArg",
   "blocked" => "noArg",
@@ -189,15 +191,25 @@ sub ROLLO_Set($@) {
       $cmd = "position-" . $arg;
       $desiredPos = $arg;
     } else {
-      if ($typ eq "HomeKit"){
-        $cmd = 100-$cmd
-      }
-
+      $cmd = 100-$cmd if ($typ eq "HomeKit");
       $cmd = "position-". $cmd;
       $desiredPos = $cmd;
     }
   } else {
-    $desiredPos = $positions{$cmd}
+    if ($cmd eq "down" || $cmd eq "up") {
+      # Recalculate the desired position
+      my $posin = ReadingsVal($name,"position",0);
+      $posin = 100-$posin if ($typ eq "HomeKit");
+      $desiredPos = int(($posin-10)/10+0.5)*10;
+      $desiredPos = int(($posin+10)/10+0.5)*10 if $cmd eq "down";
+      $desiredPos = 100 if $desiredPos > 100;
+      $desiredPos = 0 if $desiredPos < 0;
+      Log3 $name,4,">>>>>>>>>>>>>>>>$posin<<<< >>>$desiredPos<<<<";
+    } else {
+      $desiredPos = $positions{$cmd};
+    }
+
+    Log3 $name,4,"ROLLO ($name) set desired position $desiredPos";
   }
 
   #wenn ich gerade am fahren bin und eine neue Zielposition angefahren werden soll,
@@ -558,6 +570,12 @@ sub ROLLO_Attr(@) {
 				<li><a name="rollo_closed">
 						<code>set &lt;Rollo-Device&gt; closed</code></a><br />
 						close the shutter (Position 100) </li>
+				<li><a name="rollo_up">
+						<code>set &lt;Rollo-Device&gt; up</code></a><br />
+						opens the shutter one step (Position +10) </li>
+				<li><a name="rollo_down">
+						<code>set &lt;Rollo-Device&gt; down</code></a><br />
+						close the shutter one step (Position -10) </li>
 				<li><a name="rollo_half">
 						<code>set &lt;Rollo-Device&gt; half</code></a><br />
 						drive the shutter to half open (Position 50) </li>
@@ -663,6 +681,12 @@ sub ROLLO_Attr(@) {
 				<li><a name="rollo_closed">
 						<code>set &lt;Rollo-Device&gt; closed</code></a><br />
 						Faehrt das Rollo komplett zu (Position 100) </li>
+				<li><a name="rollo_up">
+						<code>set &lt;Rollo-Device&gt; up</code></a><br />
+						Faehrt das Rollo um 10 auf (Position +10) </li>
+				<li><a name="rollo_down">
+						<code>set &lt;Rollo-Device&gt; down</code></a><br />
+						Faehrt das Rollo um 10 zu (Position -10) </li>
 				<li><a name="rollo_half">
 						<code>set &lt;Rollo-Device&gt; half</code></a><br />
 						Faehrt das Rollo zur haelfte runter bzw. hoch (Position 50) </li>
