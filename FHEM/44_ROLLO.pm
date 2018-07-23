@@ -244,7 +244,6 @@ sub ROLLO_Set($@) {
       $desiredPos = int(($posin+10)/10+0.5)*10 if $cmd eq "down";
       $desiredPos = 100 if $desiredPos > 100;
       $desiredPos = 0 if $desiredPos < 0;
-      Log3 $name,4,">>>>>>>>>>>>>>>>$posin<<<< >>>$desiredPos<<<<";
     } else {
       $desiredPos = $pcts{$cmd};
     }
