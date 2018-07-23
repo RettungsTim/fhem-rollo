@@ -248,6 +248,7 @@ sub ROLLO_Set($@) {
       $desiredPos = $pcts{$cmd};
     }
 
+    $desiredPos = "none" if !$desiredPos || $desiredPos eq "";
     Log3 $name,4,"ROLLO ($name) set desired pct $desiredPos";
   }
 
