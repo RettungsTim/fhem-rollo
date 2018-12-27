@@ -41,7 +41,9 @@ my %sets = (
   "unblocked" => "noArg",
   "position" => "0,10,20,30,40,50,60,70,80,90,100",
   "reset" => "open,closed",
-  "extern" => "open,closed,stop");
+  "extern" => "open,closed,stop",
+  "drive" => "textField"
+  );
 
 my %positions = (
   "open" => 0,
@@ -79,6 +81,7 @@ sub ROLLO_Initialize($) {
     . " autoStop:1,0"
 	. " type:normal,HomeKit"
 	. " forceDrive:0,1"
+	. " noSetPosBlocked:0,1"
 	. " " . $readingFnAttributes;
 
   $hash->{stoptime} = 0;
@@ -106,6 +109,7 @@ sub ROLLO_Define($$) {
  # $attr{$name}{"blockMode"} = "none";
   $attr{$name}{"webCmd"} = "open:closed:half:stop:position";
   # $attr{$name}{"devStateIcon"} #wird jetzt abhängig von Attribut type definiert!
+   
   return undef;
 }
 
@@ -130,6 +134,9 @@ sub ROLLO_Set($@) {
   my $cmd =  $a[1];
   my $arg = "";
   $arg = $a[2] if defined $a[2];
+  my $arg2 = "";
+  $arg2 = $a[3] if defined $a[3];
+  
   Log3 $name,5,"ROLLO ($name) >> Set ($cmd,$arg)" if ($cmd ne "?");
 
   my @positionsets = ("0","10","20","30","40","50","60","70","80","90","100");
@@ -181,10 +188,26 @@ sub ROLLO_Set($@) {
     fhem( "deletereading $name blocked");
     return;
   }
+  if ($cmd eq "drive") {
+	my $direction = $arg;
+	$arg = undef;
+	my $time = $arg2;
+	Log3 $name,3,"DRIVE Command drive $direction for $time seconds. ";
+	ROLLO_Stop($hash);
+    ROLLO_Drive ($hash,$time,$direction,$cmd);
+	return undef;
+  }
+  
   my $desiredPos = $cmd;
+  Log3 $name,3,"DesiredPos set to $desiredPos, ($arg) ";
   my $typ = AttrVal($name,"type","normal");
+  # Allow all positions 
   if ( grep /^$arg$/, @positionsets )
-  {
+  #change sequence to avoid "is not numeric" warning
+  #if ($arg && $arg =~ /^[0-9,.E]*$/ && $arg >= 0 && $arg <= 100 )
+  #if ($arg >= 0 && $arg <= 100 )
+    {
+  Log3 $name,3,"We have an Arg $arg,$cmd";
 	if ($cmd eq "position") { 
 	  if ($typ eq "HomeKit"){
 		Log3 $name,4,"invert Position from $arg to (100-$arg)";
@@ -192,6 +215,7 @@ sub ROLLO_Set($@) {
 	  }
       $cmd = "position-". $arg;
       $desiredPos = $arg;
+	  Log3 $name,3,"DesiredPos now $desiredPos, $arg";
 	} else {
 	  if ($typ eq "HomeKit"){
 		$cmd = 100-$cmd
@@ -204,7 +228,9 @@ sub ROLLO_Set($@) {
   {
     $desiredPos = $positions{$cmd}
   }
-
+  
+  Log3 $name,3,"DesiredPos now $desiredPos, $cmd";
+  
   #wenn ich gerade am fahren bin und eine neue Zielposition angefahren werden soll,
   # muss ich jetzt erst mal meine aktuelle Position berechnen und updaten
   # bevor ich die desired-position überschreibe!
@@ -214,7 +240,7 @@ sub ROLLO_Set($@) {
 	my $position = ROLLO_calculatePosition($hash,$name);
 	readingsSingleUpdate($hash,"position",$position,1);		
 	# Desired-position sollte auf aktuelle position gesetzt werden, wenn explizit gestoppt wird. 
-	readingsSingleUpdate($hash,"desired_position",$position,1) if($cmd eq "stop" || $cmd eq "blocked");													
+	readingsSingleUpdate($hash,"desired_position",$position,1) if(($cmd eq "stop" || $cmd eq "blocked") && $position > 0 && $position < 100);													
   }
   readingsBeginUpdate($hash);	
   readingsBulkUpdate($hash,"command",$cmd);
@@ -232,7 +258,7 @@ sub ROLLO_isAllowed($$$) {
   my ($hash,$cmd,$desired_position) = @_;
   my $name = $hash->{NAME};
   
-  if (ReadingsVal($name,"blocked","0") ne "1") {
+  if (ReadingsVal($name,"blocked","0") ne "1" or AttrVal($name,"noSetPosBlocked",0) == 0) {
 	return 1;
   }
   my $position = ReadingsVal($name,"position",undef);
@@ -247,6 +273,44 @@ sub ROLLO_isAllowed($$$) {
 	  }
   return 1;
 }
+#****************************************************************************
+sub ROLLO_Drive  {
+	my ($hash,$time,$direction,$command) = @_;
+	my $name = $hash->{NAME};
+	my ($command1,$command2,$command3);
+    if($direction eq "down") {
+      $command1 = AttrVal($name,'commandDown',"");
+      $command2 = AttrVal($name,'commandDown2',"");
+      $command3 = AttrVal($name,'commandDown3',"");
+    } else {
+      $command1 = AttrVal($name,'commandUp',"");
+      $command2 = AttrVal($name,'commandUp2',"");
+      $command3 = AttrVal($name,'commandUp3',"");
+    }
+	
+	$command = "drive-" . $direction;
+    readingsBeginUpdate($hash);
+    readingsBulkUpdate($hash,"last_drive",$command);
+    readingsBulkUpdate($hash,"state",$command);
+    readingsEndUpdate($hash,1);
+	
+    #***** ROLLO NICHT LOSFAHREN WENN SCHON EXTERN GESTARTET *****#
+    if (ReadingsVal($name,"drive-type","undef") ne "extern") {
+	  Log3 $name,4,"ROLLO ($name) execute following commands: $command1; $command2; $command3";
+	  readingsSingleUpdate($hash,"drive-type","modul",1);
+      fhem("$command1") if ($command1 ne "");
+      fhem("$command2") if ($command2 ne "");
+      fhem("$command3") if ($command3 ne "");
+    } else {
+      #readingsSingleUpdate($hash,"drive-type","extern",1);
+	  readingsSingleUpdate($hash,"drive-type","na",1);
+      Log3 $name,4,"ROLLO ($name) drive-type is extern, not executing driving commands";
+    }
+
+    $hash->{stoptime} = int(gettimeofday()+$time);
+    InternalTimer($hash->{stoptime}, "ROLLO_Timer", $hash, 1);
+    Log3 $name,4,"ROLLO ($name) stop in $time seconds.";
+}
 
 #################################################################### START #####
 sub ROLLO_Start($) {
@@ -255,7 +319,7 @@ sub ROLLO_Start($) {
   Log3 $name,5,"ROLLO ($name) >> Start";
 
   my $command = ReadingsVal($name,"command","stop");
-  my $desired_position = ReadingsVal($name,"desired_position",100);
+  my $desired_position = ReadingsNum($name,"desired_position",100);
   my $position = ReadingsVal($name,"position",0);
   my $state = ReadingsVal($name,"state","open");
 
@@ -311,6 +375,8 @@ sub ROLLO_Start($) {
 
   my $direction = "down";
   $direction = "up" if ($position > $desired_position || $desired_position == 0);
+  if ($hash->{driveDir}) {$direction = $hash->{driveDir}};
+  
   Log3 $name,4,"ROLLO ($name) position: $position -> $desired_position / direction: $direction";
 
   #Ich fahre ja gerade...wo bin ich aktuell?
@@ -325,8 +391,9 @@ sub ROLLO_Start($) {
       return;
     }
 
-    $direction = "down";
-    $direction = "up" if ($position > $desired_position || $desired_position == 0);
+	# das haben wir schon weiter oben
+    #$direction = "down";
+    #$direction = "up" if ($position > $desired_position || $desired_position == 0);
     if ( (($state eq "drive-down") && ($direction eq "up")) || (($state eq "drive-up") && ($direction eq "down")) )
     {
       Log3 $name,3,"driving into wrong direction. stop and change driving direction";
@@ -336,46 +403,19 @@ sub ROLLO_Start($) {
     }
   }
   
+  my $time = 0;
+  
   RemoveInternalTimer($hash);
-  my $time = ROLLO_calculateDriveTime($name,$position,$desired_position,$direction);
+  
+  $time = ROLLO_calculateDriveTime($name,$position,$desired_position,$direction);
+  
   if ($time > 0)
   {
-    my ($command1,$command2,$command3);
-    if($direction eq "down") {
-      $command1 = AttrVal($name,'commandDown',"");
-      $command2 = AttrVal($name,'commandDown2',"");
-      $command3 = AttrVal($name,'commandDown3',"");
-    } else {
-      $command1 = AttrVal($name,'commandUp',"");
-      $command2 = AttrVal($name,'commandUp2',"");
-      $command3 = AttrVal($name,'commandUp3',"");
-    }
-	
-	$command = "drive-" . $direction;
-    readingsBeginUpdate($hash);
-    readingsBulkUpdate($hash,"last_drive",$command);
-    readingsBulkUpdate($hash,"state",$command);
-    readingsEndUpdate($hash,1);
-	
-    #***** ROLLO NICHT LOSFAHREN WENN SCHON EXTERN GESTARTET *****#
-    if (ReadingsVal($name,"drive-type","undef") ne "extern") {
-	  Log3 $name,4,"ROLLO ($name) execute following commands: $command1; $command2; $command3";
-	  readingsSingleUpdate($hash,"drive-type","modul",1);
-      fhem("$command1") if ($command1 ne "");
-      fhem("$command2") if ($command2 ne "");
-      fhem("$command3") if ($command3 ne "");
-    } else {
-      #readingsSingleUpdate($hash,"drive-type","extern",1);
-	  readingsSingleUpdate($hash,"drive-type","na",1);
-      Log3 $name,4,"ROLLO ($name) drive-type is extern, not executing driving commands";
-    }
-
-    $hash->{stoptime} = int(gettimeofday()+$time);
-    InternalTimer($hash->{stoptime}, "ROLLO_Timer", $hash, 1);
-    Log3 $name,4,"ROLLO ($name) stop in $time seconds.";
+	ROLLO_Drive ($hash,$time,$direction,$command);
   }
   return undef;
 }
+#****************************************************************************
 sub ROLLO_Timer($) {
   my ($hash) = @_;
   my $name = $hash->{NAME};
@@ -391,6 +431,8 @@ sub ROLLO_Timer($) {
 sub ROLLO_Stop($) {
   my ($hash) = @_;
   my $name = $hash->{NAME};
+  #my $command = ReadingsVal($name,"command","stop");
+  
   Log3 $name,5,"ROLLO ($name) >> Stop";
 
   RemoveInternalTimer($hash);
@@ -399,8 +441,8 @@ sub ROLLO_Stop($) {
   my $state = ReadingsVal($name,"state","");
   Log3 $name,4,"ROLLO ($name): stops from $state at position $position";
 
-  #wenn autostop=1 und position <> 0+100 und rollo fährt, dann kein stopbefehl ausführen...
-  if( ($state =~ /drive-/ && $position > 0 && $position < 100 ) || AttrVal($name, "autoStop", 0) ne 1)
+  #wenn autostop=1 und position <> 0+100 und rollo fährt, dann kein stopbefehl ausführen... 
+  if( ($state =~ /drive-/ && $position >= 0 && $position <= 100 ) || AttrVal($name, "autoStop", 0) ne 1)
   {
     my $command = AttrVal($name,'commandStop',"");
     $command = AttrVal($name,'commandStopUp',"") if(defined($attr{$name}{commandStopUp}));
@@ -483,6 +525,47 @@ sub ROLLO_calculatePosition(@) {
   #aktuelle Position aktualisieren und zurückgeben
   readingsSingleUpdate($hash,"position",$position,100);
   return $position;
+}
+#****************************************************************************
+sub ROLLO_calculateDesiredPosition(@) {
+  my ($hash,$name) = @_;
+  my ($position);
+  Log3 $name,5,"ROLLO ($name) >> calculateDesiredPosition";
+
+  
+  my $start = 0;
+  my $dtime = $hash->{driveTime};
+  my $direction = $hash->{driveDir};
+  Log3 $name,4,"ROLLO ($name) drive $direction for $dtime";
+  my ($time, $steps);
+  if ($direction eq "up") {
+    $time = AttrVal($name,'secondsUp',undef);
+	$start = 100;
+  } else {
+    $time = AttrVal($name,'secondsDown',undef);
+	$start = 0;
+  }
+  
+  my $startPos = ReadingsVal($name,"position",100);
+  
+  $time += AttrVal($name,'reactionTime',0);
+  #$time += AttrVal($name,'excessTop',0) if($startPos == 0);
+  #$time += AttrVal($name,'excessBottom',0) if($startPos == 100);
+  #$time += AttrVal($name,'resetTime', 0) if($startPos == 0 or $startPos == 100);
+  
+  $steps = $dtime/$time * 100;
+  Log3 $name,4,"ROLLO ($name) total time = $time, we're intending to drive $steps steps";
+  if ($direction eq "up") {
+	$position = $startPos - $steps;
+  }
+  else {
+	$position = $startPos + $steps;
+  }
+  $position = 100 if($position > 100);
+  $position = 0 if($position < 0);
+  
+  Log3 $name,4,"ROLLO ($name) Target position is $position";
+  return int($position);
 }
 #****************************************************************************
 sub ROLLO_calculateDriveTime(@) {
@@ -694,6 +777,8 @@ sub ROLLO_Attr(@) {
 					<br />if set any ROLLO_AUTOMATIC  commandy are executed delayed (in minutes)<br></li>
 				<li><a name="rollo_forceDrive"><code>attr &lt;Rollo-Device&gt; forceDrive [0|1]</code></a>
 					<br />force open/closed even if device is already in target position<br></li>
+				<li><a name="rollo_noSetPosBlocked"><code>attr &lt;Rollo-Device&gt; noSetPosBlocked [0|1]</code></a>
+					<br />if disabled positions may be set even if device is blocked. After unblocking it will drive to the position.<br></li>
 				<li><a href="#readingFnAttributes">readingFnAttributes</a></li>
 			</ul>
 </ul>
