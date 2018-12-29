@@ -1,12 +1,14 @@
 ########################################################################################
 # $Id: 44_ROLLO.pm 1202 2018-07-23 08:38:00Z                                         $ #
 # Modul zur einfacheren Rolladensteuerung   										   #
-#  																					   #
+# Spezialversion für Clunis Rollosteuerung	                                           #
+#   																				   #
+# https://forum.fhem.de/index.php/topic,73964.msg656512.html#msg656512                 #
+# 																					   #
 # Thomas Ramm, 2016                                                                    #
 # Tim Horenkamp, 2018                                                                  #
 # Markus Moises, 2016                                                                  #
 # Mirko Lindner, 2018                                                                  #
-# KernSani, 2017																	   #
 #                                                                                      #
 ########################################################################################
 #
@@ -31,702 +33,552 @@ package main;
 use strict;
 use warnings;
 
-my $version = "1.400";
+my $version = "1.300";
 
 my %sets = (
-    "open"      => "noArg",
-    "closed"    => "noArg",
-    "up"        => "noArg",
-    "down"      => "noArg",
-    "half"      => "noArg",
-    "stop"      => "noArg",
-    "blocked"   => "noArg",
-    "unblocked" => "noArg",
-    "pct"       => "0,10,20,30,40,50,60,70,80,90,100",
-    "reset"     => "open,closed",
-    "extern"    => "open,closed,stop",
-    "drive"     => "textField"
-);
+  "open" => "noArg",
+  "closed" => "noArg",
+  "up" => "noArg",
+  "down" => "noArg",
+  "half" => "noArg",
+  "stop" => "noArg",
+  "blocked" => "noArg",
+  "unblocked" => "noArg",
+  "pct" => "0,10,20,30,40,50,60,70,80,90,100",
+  "reset" => "open,closed",
+  "extern" => "open,closed,stop");
 
 my %pcts = (
-    "open"   => 0,
-    "closed" => 100,
-    "half"   => 50
-);
+  "open" => 0,
+  "closed" => 100,
+  "half" => 50);
 
-my %gets = ( "version:noArg" => "V" );
+my %gets = (
+   "version:noArg" => "V"
+  );
 
 ############################################################ INITIALIZE #####
 sub ROLLO_Initialize($) {
-    my ($hash) = @_;
-    my $name = $hash->{NAME};
+  my ($hash) = @_;
+  my $name = $hash->{NAME};
 
-    $hash->{DefFn}   = "ROLLO_Define";
-    $hash->{UndefFn} = "ROLLO_Undef";
-    $hash->{SetFn}   = "ROLLO_Set";
-    $hash->{GetFn}   = "ROLLO_Get";
-    $hash->{AttrFn}  = "ROLLO_Attr";
+  $hash->{DefFn}    = "ROLLO_Define";
+  $hash->{UndefFn}  = "ROLLO_Undef";
+  $hash->{SetFn}    = "ROLLO_Set";
+  $hash->{GetFn}    = "ROLLO_Get";
+  $hash->{AttrFn}   = "ROLLO_Attr";
 
-    $hash->{AttrList} =
-        " secondsDown"
-      . " secondsUp"
-      . " excessTop"
-      . " excessBottom"
-      . " switchTime"
-      . " resetTime"
-      . " reactionTime"
-      . " blockMode:blocked,force-open,force-closed,only-up,only-down,half-up,half-down,none"
-      . " commandUp commandUp2 commandUp3"
-      . " commandDown commandDown2 commandDown3"
-      . " commandStop commandStopDown commandStopUp"
-      . " automatic-enabled:on,off"
-      . " automatic-delay"
-      . " autoStop:1,0"
-      . " type:normal,HomeKit"
-      . " forceDrive:0,1"
-      . " noSetPosBlocked:0,1" . " "
-      . $readingFnAttributes;
+  $hash->{AttrList} = " secondsDown"
+    . " secondsUp"
+    . " excessTop"
+    . " excessBottom"
+    . " switchTime"
+    . " resetTime"
+    . " reactionTime"
+    . " blockMode:blocked,force-open,force-closed,only-up,only-down,half-up,half-down,none"
+    . " commandUp commandUp2 commandUp3"
+    . " commandDown commandDown2 commandDown3"
+    . " commandStop commandStopDown commandStopUp"
+    . " automatic-enabled:on,off"
+    . " automatic-delay"
+    . " autoStop:1,0"
+    . " type:normal,HomeKit"
+	. " Auto_Modus_hoch:bei_Abwesenheit,bei_Anwesenheit,immer,aus"
+	. " Auto_Modus_runter:bei_Abwesenheit,bei_Anwesenheit,immer,aus"
+	. " Auto_hoch:Zeit,Astro Auto_runter:Zeit,Astro Auto_Abschattung_Pos:10,20,30,40,50,60,70,80,90,100"
+	. " Auto_Abschattung_Pos_nach_Abschattung:-1,0,10,20,30,40,50,60,70,80,90,100"
+	. " Auto_Lueften_Pos:10,20,30,40,50,60,70,80,90,100"
+	. " Auto_offen_Pos:10,20,30,40,50,60,70,80,90,100"
+	. " Auto_Himmelsrichtung"
+	. " Auto_Abschattung:ja,nein,verspaetet,bei_Abwesenheit,bei_Anwesenheit"
+	. " Auto_Zeit_hoch_frueh Auto_Zeit_hoch_spaet"
+	. " Auto_Zeit_hoch_WE_Urlaub Auto_Zeit_runter_frueh"
+	. " Auto_Zeit_runter_spaet Auto_Zufall_Minuten"
+	. " Auto_Fensterkontakt"
+	. " Auto_Frostschutz:ja,nein"
+	. " Auto_Luft_Fenster_offen:ja,nein"
+	. " Auto_Aussperrschutz:ja,nein"
+	. " Auto_Geoeffnet_Pos:10,20,30,40,50,60,70,80,90,100"
+	. " Auto_Abschattung_Winkel_links:0,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90"
+	. " Auto_Abschattung_Winkel_rechts:0,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90"
+	. " Auto_Abschattung_Helligkeitssensor"
+	. " Auto_Abschattung_Helligkeits_Reading"
+	. " Auto_Abschattung_Schwelle_sonnig"
+	. " Auto_Abschattung_Schwelle_wolkig"
+	. " Auto_Abschattung_Wartezeit"
+	. " Auto_Abschattung_min_elevation"
+	. " Auto_Abschattung_min_Temp_aussen"
+	. " Auto_Abschattung_Sperrzeit_nach_manuell"
+	. " Auto_Offset_Minuten_morgens"
+	. " Auto_Offset_Minuten_abends"
+	. " Auto_Abschattung_Sperrzeit_vor_Nacht"
+	. " Auto_Abschattung_schnell_oeffnen:nein,ja"
+	. " Auto_Abschattung_schnell_schliessen:nein,ja"
+	. " Auto_Fensterkontakttyp:twostate,threestate"
+	. " Auto_Pos_Befehl Auto_geschlossen_Pos"
+	. " Auto_Gaestezimmer:nein,ja"
+	. " Auto_Pos_nach_KomfortOeffnen:-2,-1,0,10,20,30,40,50,60,70,80,90,100"
+	. " Rollladensteuerung:nein,ja"
+	. " subType"
+    . " " . $readingFnAttributes;
 
-    $hash->{stoptime} = 0;
+  $hash->{stoptime} = 0;
 
-    return undef;
+  return undef;
 }
 
 ################################################################ DEFINE #####
 sub ROLLO_Define($$) {
-    my ( $hash, $def ) = @_;
-    my $name = $hash->{NAME};
-    Log3 $name, 5, "ROLLO ($name) >> Define";
+  my ($hash,$def) = @_;
+  my $name = $hash->{NAME};
+  Log3 $name,5,"ROLLO ($name) >> Define";
 
-    my @a = split( "[ \t][ \t]*", $def );
+  my @a = split( "[ \t][ \t]*", $def );
 
-    $attr{$name}{"secondsDown"}  = 30;
-    $attr{$name}{"secondsUp"}    = 30;
-    $attr{$name}{"excessTop"}    = 4;
-    $attr{$name}{"excessBottom"} = 2;
-    $attr{$name}{"switchTime"}   = 1;
-    $attr{$name}{"resetTime"}    = 0;
-    $attr{$name}{"autoStop"} = 0;    #neue Attribute sollten als default keine Änderung an der Funktionsweise bewirken.
-    $attr{$name}{"devStateIcon"} =
-'open:fts_shutter_10:closed closed:fts_shutter_100:open half:fts_shutter_50:closed drive-up:fts_shutter_up@red:stop drive-down:fts_shutter_down@red:stop pct-100:fts_shutter_100:open pct-90:fts_shutter_80:closed pct-80:fts_shutter_80:closed pct-70:fts_shutter_70:closed pct-60:fts_shutter_60:closed pct-50:fts_shutter_50:closed pct-40:fts_shutter_40:open pct-30:fts_shutter_30:open pct-20:fts_shutter_20:open pct-10:fts_shutter_10:open pct-0:fts_shutter_10:closed';
-    $attr{$name}{"type"} = "normal"; #neue Attribute sollten als default keine Änderung an der Funktionsweise bewirken.
-
-    #	$attr{$name}{"blockMode"} = "none";
-    return undef;
+	$attr{$name}{"secondsDown"} = 30;
+	$attr{$name}{"secondsUp"} = 30;
+	$attr{$name}{"excessTop"} = 4;
+	$attr{$name}{"excessBottom"} = 2;
+	$attr{$name}{"switchTime"} = 1;
+	$attr{$name}{"resetTime"} = 0;
+	$attr{$name}{"autoStop"} = 0; 													#neue Attribute sollten als default keine Änderung an der Funktionsweise bewirken.
+	$attr{$name}{"devStateIcon"} = 'open:fts_shutter_10:closed closed:fts_shutter_100:open half:fts_shutter_50:closed drive-up:fts_shutter_up@red:stop drive-down:fts_shutter_down@red:stop pct-100:fts_shutter_100:open pct-90:fts_shutter_80:closed pct-80:fts_shutter_80:closed pct-70:fts_shutter_70:closed pct-60:fts_shutter_60:closed pct-50:fts_shutter_50:closed pct-40:fts_shutter_40:open pct-30:fts_shutter_30:open pct-20:fts_shutter_20:open pct-10:fts_shutter_10:open pct-0:fts_shutter_10:closed';
+	$attr{$name}{"type"} = "normal"; 												#neue Attribute sollten als default keine Änderung an der Funktionsweise bewirken.
+#	$attr{$name}{"blockMode"} = "none";
+	$attr{$name}{"webCmd"} = "open:closed:half:stop:pct";
+#	$attr{$name}{"devStateIcon"}; 													#wird jetzt abhängig von Attribut type definiert!
+  return undef;
 }
 
 ################################################################# UNDEF #####
 sub ROLLO_Undef($) {
-    my ($hash) = @_;
-    my $name = $hash->{NAME};
-    RemoveInternalTimer($hash);
-    return undef;
+  my ($hash) = @_;
+  my $name = $hash->{NAME};
+  RemoveInternalTimer($hash);
+  return undef;
 }
 
 #################################################################### SET #####
 sub ROLLO_Set($@) {
-    my ( $hash, @a ) = @_;
-    my $name = $hash->{NAME};
-    $attr{$name}{"webCmd"} = "open:closed:half:stop:pct";
-	if (ReadingsVal($name,"position","exists") ne "exists") {
-		#Log3 $name,1, "ROLLO ($name) Readings position and desired_position aren't used anymore. Execute \"deletereading $name position\" and \"deletereading $name desired_position\" to remove them";
-	}
+  my ($hash,@a) = @_;
+  my $name = $hash->{NAME};
 
-    #allgemeine Fehler in der Parameterübergabe abfangen
-    if ( @a < 2 ) {
-        Log3 $name, 2, "ERROR: \"set ROLLO\" needs at least one argument";
-        return "\"ROLLO_Set\" needs at least one argument";
-    }
-    my $cmd = $a[1];
+  #allgemeine Fehler in der Parameterübergabe abfangen
+  if ( @a < 2 ) {
+    Log3 $name,2,"ERROR: \"set ROLLO\" needs at least one argument";
+    return "\"ROLLO_Set\" needs at least one argument";
+  }
+  my $cmd =  $a[1];
+  my $arg = "";
+  $arg = $a[2] if defined $a[2];
+  Log3 $name,5,"ROLLO ($name) >> Set ($cmd,$arg)" if ($cmd ne "?");
 
-	# Keep command "position" for a while
-    if ($cmd eq "position" ) {
-        $cmd = "pct";
-        Log3 $name, 1, "ROLLO ($name) Set command \"position\" is deprecated. Please change your definitions to \"pct\"";
-    }
-	
-    my $arg = "";
-    $arg = $a[2] if defined $a[2];
-    my $arg2 = "";
-    $arg2 = $a[3] if defined $a[3];
+  my @pctsets = ("0","10","20","30","40","50","60","70","80","90","100");
 
-    Log3 $name, 5, "ROLLO ($name) >> Set ($cmd,$arg)" if ( $cmd ne "?" );
-
-    my @pctsets = ( "0", "10", "20", "30", "40", "50", "60", "70", "80", "90", "100" );
-
-    if ( !defined( $sets{$cmd} ) && $cmd !~ @pctsets ) {
-        my $param = "";
-        foreach my $val ( keys %sets ) {
-            $param .= " $val:$sets{$val}";
-        }
-
-        Log3 $name, 2, "ERROR: Unknown command $cmd, choose one of $param" if ( $cmd ne "?" );
-        return "Unknown argument $cmd, choose one of $param";
+  if(!defined($sets{$cmd}) && $cmd !~ @pctsets) {
+    my $param = "";
+    foreach my $val (keys %sets) {
+        $param .= " $val:$sets{$val}";
     }
 
-    if ( ( $cmd eq "stop" ) && ( ReadingsVal( $name, "state", '' ) !~ /drive/ ) ) {
-        Log3 $name, 3, "WARNING: command is stop but shutter is not driving!";
-        RemoveInternalTimer($hash);
-        ROLLO_Stop($hash);
-        return undef;
-    }
+    Log3 $name,2,"ERROR: Unknown command $cmd, choose one of $param" if ($cmd ne "?");
+    return "Unknown argument $cmd, choose one of $param";
+  }
 
-    if ( $cmd eq "extern" ) {
-        readingsSingleUpdate( $hash, "drive-type", "extern", 1 );
-        $cmd = $arg;
-    }
-    elsif ( $cmd eq "reset" ) {
-        my $reset_pct = $pcts{$arg};
-        $reset_pct = 100 - $reset_pct if ( AttrVal( $name, "type", "normal" ) eq "HomeKit" );
-
-        readingsBeginUpdate($hash);
-        readingsBulkUpdate( $hash, "state",       $arg );
-        readingsBulkUpdate( $hash, "desired_pct", $reset_pct );
-        readingsBulkUpdate( $hash, "pct",         $reset_pct );
-        readingsEndUpdate( $hash, 1 );
-        return undef;
-    }
-
-    if ( $cmd eq "blocked" ) {
-        ROLLO_Stop($hash);
-        readingsSingleUpdate( $hash, "blocked", "1", 1 );
-        return if ( AttrVal( $name, "blockMode", "none" ) eq "blocked" );
-    }
-    elsif ( $cmd eq "unblocked" ) {
-
-        # Wenn blocked=1 wird in Rollo_Stop der state auf "blocked" gesetzt
-        # daher erst blocked auf 0 (Stop ist m.E. an dieser Stelle eigentlich nicht notwendig)
-        #ROLLO_Stop($hash); 							#delete KernSani
-        readingsSingleUpdate( $hash, "blocked", "0", 1 );
-        ROLLO_Stop($hash);    #add KernSani
-        ROLLO_Start($hash);
-        fhem("deletereading $name blocked");
-        return;
-    }
-    if ( $cmd eq "drive" ) {
-		return "Drive needs two arguments, the direction and the time in seconds" if (!$arg2);
-        my $direction = $arg;
-        $arg = undef;
-        my $time = $arg2;
-		$hash->{driveTime} = $time;
-		$hash->{driveDir} = $direction;
-		my $dpct = ROLLO_calculateDesiredPosition($hash,$name);
-		readingsSingleUpdate($hash,"desired_pct",$dpct,1);
-        Log3 $name, 3, "DRIVE Command drive $direction for $time seconds. ";
-        ROLLO_Stop($hash);
-        ROLLO_Drive( $hash, $time, $direction, $cmd );
-        return undef;
-    }
-
-    my $desiredPos = $cmd;
-    Log3 $name, 3, "DesiredPos set to $desiredPos, ($arg) ";
-    my $typ = AttrVal( $name, "type", "normal" );
-
-    # Allow all positions
-    #if ( grep /^$arg$/, @pctsets )
-
-      #change sequence to avoid "is not numeric" warning
-    if ($arg && $arg =~ /^[0-9,.E]*$/ && $arg >= 0 && $arg <= 100 )
-      #if ($arg >= 0 && $arg <= 100 )
-    {
-        Log3 $name, 5, "We have an Arg $arg,$cmd";
-        if ( $cmd eq "pct" ) {
-            if ( $typ eq "HomeKit" ) {
-                Log3 $name, 4, "invert pct from $arg to (100-$arg)";
-                $arg = 100 - $arg;
-            }
-            $cmd        = "pct-" . $arg;
-            $desiredPos = $arg;
-            Log3 $name, 3, "DesiredPos now $desiredPos, $arg";
-        }
-        else { #I think this shouldn't happen... 
-            if ( $typ eq "HomeKit" ) {
-                $cmd = 100 - $cmd;
-            }
-            $cmd        = "pct-" . $cmd;
-            $desiredPos = $cmd;
-        }
-    }
-    else {
-        if ( $cmd eq "down" || $cmd eq "up" ) {
-
-            # Recalculate the desired pct
-            my $posin = ReadingsVal( $name, "pct", 0 );
-            $posin = 100 - $posin if ( $typ eq "HomeKit" );
-            $desiredPos = int( ( $posin - 10 ) / 10 + 0.5 ) * 10;
-            $desiredPos = int( ( $posin + 10 ) / 10 + 0.5 ) * 10 if $cmd eq "down";
-            $desiredPos = 100 if $desiredPos > 100;
-            $desiredPos = 0   if $desiredPos < 0;
-        }
-        else {
-            $desiredPos = $pcts{$cmd};
-        }
-		
-		# Ich verstehe nicht wann nachfolgender Zustand eintreten kann, das Coding führt aber dazu, dass pct 0 (open) auf "none" gesetzt wird 
-        #$desiredPos = "none" if !$desiredPos || $desiredPos eq "";  
-		
-		
-			
-        Log3 $name, 4, "ROLLO ($name) set desired pct $desiredPos";
-    }
-
-    Log3 $name, 3, "DesiredPos now $desiredPos, $cmd";
-
-    #wenn ich gerade am fahren bin und eine neue Zielposition angefahren werden soll,
-    # muss ich jetzt erst mal meine aktuelle Position berechnen und updaten
-    # bevor ich die desired-position überschreibe!
-
-    if ( ( ReadingsVal( $name, "state", "" ) =~ /drive-/ ) ) {
-        my $pct = ROLLO_calculatepct( $hash, $name );
-        readingsSingleUpdate( $hash, "pct", $pct, 1 );
-
-        # Desired-position sollte auf aktuelle position gesetzt werden, wenn explizit gestoppt wird.
-        readingsSingleUpdate( $hash, "desired_pct", $pct, 1 )
-          if ( ( $cmd eq "stop" || $cmd eq "blocked" ) && $pct > 0 && $pct < 100 );
-    }
-    readingsBeginUpdate($hash);
-    readingsBulkUpdate( $hash, "command", $cmd );
-
-    # desired position sollte nicht gesetzt werden, wenn ein unerlaubter Befehl (wenn Rollladen geblockt ist)
-    # gesendet wird. Sonst rennt er direkt nach dem "unblock" los
-    # readingsBulkUpdate($hash,"desired_position",$desiredPos) if($cmd ne "blocked") && ($cmd ne "stop")
-    readingsBulkUpdate( $hash, "desired_pct", $desiredPos )
-      if ( $cmd ne "blocked" ) && ( $cmd ne "stop" ) && ROLLO_isAllowed( $hash, $cmd, $desiredPos );
-    readingsEndUpdate( $hash, 1 );
-
-    ROLLO_Start($hash);
+  if (($cmd eq "stop") && (ReadingsVal($name,"state",'') !~ /drive/)) {
+    Log3 $name,3,"WARNING: command is stop but shutter is not driving!";
+    RemoveInternalTimer($hash);
+    ROLLO_Stop($hash);
     return undef;
-}
-#################################################################### isAllowed #####
-sub ROLLO_isAllowed($$$) {
-    my ( $hash, $cmd, $desired_pct ) = @_;
-    my $name = $hash->{NAME};
+  }
 
-    if ( ReadingsVal( $name, "blocked", "0" ) ne "1" or AttrVal( $name, "noSetPosBlocked", 0 ) == 0 ) {
-        return 1;
-    }
-    my $pct = ReadingsVal( $name, "pct", undef );
-    my $blockmode = AttrVal( $name, "blockMode", "none" );
-    Log3 $name, 3, "ROLLO ($name) >> Blockmode:$blockmode $pct-->$desired_pct";
-    if (   $blockmode eq "blocked"
-        || ( $blockmode eq "only-up"   && $pct <= $desired_pct )
-        || ( $blockmode eq "only-down" && $pct >= $desired_pct ) )
-    {
-        return undef;
-    }
-    return 1;
-}
+  if ($cmd eq "extern") {
+    readingsSingleUpdate($hash,"drive-type","extern",1);
+    $cmd = $arg;
+  } elsif ($cmd eq "reset") {
+    my $reset_pct = $pcts{$arg};
+    $reset_pct = 100-$reset_pct if (AttrVal($name,"type","normal") eq "HomeKit");
 
-#****************************************************************************
-sub ROLLO_Drive {
-    my ( $hash, $time, $direction, $command ) = @_;
-    my $name = $hash->{NAME};
-    my ( $command1, $command2, $command3 );
-    if ( $direction eq "down" ) {
-        $command1 = AttrVal( $name, 'commandDown',  "" );
-        $command2 = AttrVal( $name, 'commandDown2', "" );
-        $command3 = AttrVal( $name, 'commandDown3', "" );
-    }
-    else {
-        $command1 = AttrVal( $name, 'commandUp',  "" );
-        $command2 = AttrVal( $name, 'commandUp2', "" );
-        $command3 = AttrVal( $name, 'commandUp3', "" );
-    }
-
-    $command = "drive-" . $direction;
     readingsBeginUpdate($hash);
-    readingsBulkUpdate( $hash, "last_drive", $command );
-    readingsBulkUpdate( $hash, "state",      $command );
-    readingsEndUpdate( $hash, 1 );
+    readingsBulkUpdate($hash,"state",$arg);
+    readingsBulkUpdate($hash,"desired_pct",$reset_pct);
+    readingsBulkUpdate($hash,"pct",$reset_pct);
+    readingsEndUpdate($hash,1);
+    return undef;
+  }
 
-    #***** ROLLO NICHT LOSFAHREN WENN SCHON EXTERN GESTARTET *****#
-    if ( ReadingsVal( $name, "drive-type", "undef" ) ne "extern" ) {
-        Log3 $name, 4, "ROLLO ($name) execute following commands: $command1; $command2; $command3";
-        readingsSingleUpdate( $hash, "drive-type", "modul", 1 );
-        fhem("$command1") if ( $command1 ne "" );
-        fhem("$command2") if ( $command2 ne "" );
-        fhem("$command3") if ( $command3 ne "" );
+  if ($cmd eq "blocked") {
+    ROLLO_Stop($hash);
+    readingsSingleUpdate($hash,"blocked","1",1);
+    return if(AttrVal($name,"blockMode","none") eq "blocked");
+  } elsif ($cmd eq "unblocked") {
+    ROLLO_Stop($hash);
+    readingsSingleUpdate($hash,"blocked","0",1);
+    ROLLO_Start($hash);
+    fhem( "deletereading $name blocked");
+    return;
+  }
+
+  my $desiredPos = $cmd;
+  my $typ = AttrVal($name,"type","normal");
+  if ( grep /^$arg$/, @pctsets ) {
+    if ($cmd eq "pct") {
+      if ($typ eq "HomeKit"){
+        Log3 $name,4,"invert pct from $arg to (100-$arg)";
+        $arg = 100-$arg
+      }
+
+      $cmd = "pct-" . $arg;
+      $desiredPos = $arg;
+    } else {
+      $cmd = 100-$cmd if ($typ eq "HomeKit");
+      $cmd = "pct-". $cmd;
+      $desiredPos = $cmd;
     }
-    else {
-        #readingsSingleUpdate($hash,"drive-type","extern",1);
-        readingsSingleUpdate( $hash, "drive-type", "na", 1 );
-        Log3 $name, 4, "ROLLO ($name) drive-type is extern, not executing driving commands";
+  } else {
+    if ($cmd eq "down" || $cmd eq "up") {
+      # Recalculate the desired pct
+      my $posin = ReadingsVal($name,"pct",0);
+      $posin = 100-$posin if ($typ eq "HomeKit");
+      $desiredPos = int(($posin-10)/10+0.5)*10;
+      $desiredPos = int(($posin+10)/10+0.5)*10 if $cmd eq "down";
+      $desiredPos = 100 if $desiredPos > 100;
+      $desiredPos = 0 if $desiredPos < 0;
+    } else {
+      $desiredPos = $pcts{$cmd};
     }
 
-    $hash->{stoptime} = int( gettimeofday() + $time );
-    InternalTimer( $hash->{stoptime}, "ROLLO_Timer", $hash, 1 );
-    Log3 $name, 4, "ROLLO ($name) stop in $time seconds.";
+    $desiredPos = "none" if !$desiredPos || $desiredPos eq "";
+    Log3 $name,4,"ROLLO ($name) set desired pct $desiredPos";
+  }
+
+  #wenn ich gerade am fahren bin und eine neue Zielpct angefahren werden soll,
+  # muss ich jetzt erst mal meine aktuelle pct berechnen und updaten
+  # bevor ich die desired-pct überschreibe!
+  if ((ReadingsVal($name,"state","") =~ /drive-/)) {
+    my $pct = ROLLO_calculatepct($hash,$name);
+
+    # pld: Not needed. Done already inside ROLLO_calculatepct()
+    # $pct = 100-$pct if $typ eq "HomeKit";
+    # readingsSingleUpdate($hash,"pct",$pct,1);
+  }
+
+  readingsBeginUpdate($hash);
+  readingsBulkUpdate($hash,"command",$cmd);
+  readingsBulkUpdate($hash,"desired_pct",$desiredPos) if($cmd ne "blocked") && ($cmd ne "stop");
+  readingsEndUpdate($hash,1);
+
+  ROLLO_Start($hash);
+  return undef;
 }
 
 #################################################################### START #####
 sub ROLLO_Start($) {
-    my ($hash) = @_;
-    my $name = $hash->{NAME};
-    Log3 $name, 5, "ROLLO ($name) >> Start";
+  my ($hash) = @_;
+  my $name = $hash->{NAME};
+  Log3 $name,5,"ROLLO ($name) >> Start";
 
-    my $command     = ReadingsVal( $name, "command",     "stop" );
-    my $desired_pct = ReadingsVal( $name, "desired_pct", 100 );
-    my $pct         = ReadingsVal( $name, "pct",         0 );
-    $pct = 100 - $pct if ( AttrVal( $name, "type", "normal" ) eq "HomeKit" );
-    my $state = ReadingsVal( $name, "state", "open" );
+  my $command = ReadingsVal($name,"command","stop");
+  my $desired_pct = ReadingsVal($name,"desired_pct",100);
+  my $pct = ReadingsVal($name,"pct",0);
+  $pct = 100-$pct if (AttrVal($name,"type","normal") eq "HomeKit");
+  my $state = ReadingsVal($name,"state","open");
 
-    Log3 $name, 4, "ROLLO ($name) drive from $pct to $desired_pct. command: $command. state: $state";
+  Log3 $name,4,"ROLLO ($name) drive from $pct to $desired_pct. command: $command. state: $state";
 
-    if ( ReadingsVal( $name, "blocked", "0" ) eq "1" && $command ne "stop" ) {
-        my $blockmode = AttrVal( $name, "blockMode", "none" );
-        Log3 $name, 4, "block mode: $blockmode - $pct to $desired_pct?";
+  if(ReadingsVal($name,"blocked","0") eq "1" && $command ne "stop") {
+    my $blockmode = AttrVal($name,"blockMode","none");
+    Log3 $name,4,"block mode: $blockmode - $pct to $desired_pct?";
 
-        if ( $blockmode eq "blocked" ) {
-            readingsSingleUpdate( $hash, "state", "blocked", 1 );
-            return;
-        }
-        elsif ( $blockmode eq "force-open" ) {
-            $desired_pct = 0;
-        }
-        elsif ( $blockmode eq "force-closed" ) {
-            $desired_pct = 100;
-        }
-        elsif ( $blockmode eq "only-up" && $pct <= $desired_pct ) {
-            readingsSingleUpdate( $hash, "state", "blocked", 1 );
-            return;
-        }
-        elsif ( $blockmode eq "only-down" && $pct >= $desired_pct ) {
-            readingsSingleUpdate( $hash, "state", "blocked", 1 );
-            return;
-        }
-        elsif ( $blockmode eq "half-up" && $desired_pct < 50 ) {
-            $desired_pct = 50;
-        }
-        elsif ( $blockmode eq "half-up" && $desired_pct == 50 ) {
-            readingsSingleUpdate( $hash, "state", "blocked", 1 );
-            return;
-        }
-        elsif ( $blockmode eq "half-down" && $desired_pct > 50 ) {
-            $desired_pct = 50;
-        }
-        elsif ( $blockmode eq "half-down" && $desired_pct == 50 ) {
-            readingsSingleUpdate( $hash, "state", "blocked", 1 );
-            return;
-        }
+    if($blockmode eq "blocked") {
+      readingsSingleUpdate($hash,"state","blocked",1);
+      return;
+    } elsif($blockmode eq "force-open") {
+      $desired_pct = 0;
+    } elsif($blockmode eq "force-closed") {
+      $desired_pct = 100;
+    } elsif($blockmode eq "only-up" && $pct <= $desired_pct) {
+      readingsSingleUpdate($hash,"state","blocked",1);
+      return;
+    } elsif($blockmode eq "only-down" && $pct >= $desired_pct) {
+      readingsSingleUpdate($hash,"state","blocked",1);
+      return;
+    } elsif($blockmode eq "half-up" && $desired_pct < 50) {
+      $desired_pct = 50;
+    } elsif($blockmode eq "half-up" && $desired_pct == 50) {
+      readingsSingleUpdate($hash,"state","blocked",1);
+      return;
+    } elsif($blockmode eq "half-down" && $desired_pct > 50) {
+      $desired_pct = 50;
+    } elsif($blockmode eq "half-down" && $desired_pct == 50) {
+      readingsSingleUpdate($hash,"state","blocked",1);
+      return;
+    }
+  }
+
+  my $direction = "down";
+  $direction = "up" if ($pct > $desired_pct || $desired_pct == 0);
+  Log3 $name,4,"ROLLO ($name) pct: $pct -> $desired_pct / direction: $direction";
+
+  #Ich fahre ja gerade...wo bin ich aktuell?
+  if ($state =~ /drive-/) {
+    #$pct = ROLLO_calculatepct($hash,$name); #das muss weg.. verschoben in set!
+
+    if ($command eq "stop") {
+      ROLLO_Stop($hash);
+      return;
     }
 
-    my $direction = "down";
-    $direction = "up" if ( $pct > $desired_pct || $desired_pct == 0 );
-    #if ( $hash->{driveDir} ) { $direction = $hash->{driveDir} }
-    Log3 $name, 4, "ROLLO ($name) pct: $pct -> $desired_pct / direction: $direction";
+    $direction = "down";
+    $direction = "up" if ($pct > $desired_pct || $desired_pct == 0);
+    if ((($state eq "drive-down") && ($direction eq "up")) || (($state eq "drive-up") && ($direction eq "down"))) {
+      Log3 $name,3,"driving into wrong direction. stop and change driving direction";
+      ROLLO_Stop($hash);
+      InternalTimer(int(gettimeofday())+AttrVal($name,'switchTime',0) , "ROLLO_Start", $hash, 0);
+      return;
+    }
+  }
 
-    #Ich fahre ja gerade...wo bin ich aktuell?
-    if ( $state =~ /drive-/ ) {
-
-        #$pct = ROLLO_calculatepct($hash,$name); #das muss weg.. verschoben in set!
-
-        if ( $command eq "stop" ) {
-            ROLLO_Stop($hash);
-            return;
-        }
-
-        #$direction = "down";
-        #$direction = "up" if ($pct > $desired_pct || $desired_pct == 0);
-        if (   ( ( $state eq "drive-down" ) && ( $direction eq "up" ) )
-            || ( ( $state eq "drive-up" ) && ( $direction eq "down" ) ) )
-        {
-            Log3 $name, 3, "driving into wrong direction. stop and change driving direction";
-            ROLLO_Stop($hash);
-            InternalTimer( int( gettimeofday() ) + AttrVal( $name, 'switchTime', 0 ), "ROLLO_Start", $hash, 0 );
-            return;
-        }
+  RemoveInternalTimer($hash);
+  my $time = ROLLO_calculateDriveTime($name,$pct,$desired_pct,$direction);
+  if ($time > 0) {
+    my ($command1,$command2,$command3);
+    if($direction eq "down") {
+      $command1 = AttrVal($name,'commandDown',"");
+      $command2 = AttrVal($name,'commandDown2',"");
+      $command3 = AttrVal($name,'commandDown3',"");
+    } else {
+      $command1 = AttrVal($name,'commandUp',"");
+      $command2 = AttrVal($name,'commandUp2',"");
+      $command3 = AttrVal($name,'commandUp3',"");
     }
 
-    my $time = 0;
+    $command = "drive-" . $direction;
+    readingsBeginUpdate($hash);
+    readingsBulkUpdate($hash,"last_drive",$command);
+    readingsBulkUpdate($hash,"state",$command);
+    readingsEndUpdate($hash,1);
 
-    RemoveInternalTimer($hash);
+    #***** ROLLO NICHT LOSFAHREN WENN SCHON EXTERN GESTARTET *****#
+    if (ReadingsVal($name,"drive-type","undef") ne "extern") {
+      Log3 $name,4,"ROLLO ($name) execute following commands: $command1; $command2; $command3";
+      readingsSingleUpdate($hash,"drive-type","modul",1);
 
-    $time = ROLLO_calculateDriveTime( $name, $pct, $desired_pct, $direction );
-
-    if ( $time > 0 ) {
-        ROLLO_Drive( $hash, $time, $direction, $command );
+      fhem("$command1") if ($command1 ne "");
+      fhem("$command2") if ($command2 ne "");
+      fhem("$command3") if ($command3 ne "");
+    } else {
+      #readingsSingleUpdate($hash,"drive-type","extern",1);
+      Log3 $name,4,"ROLLO ($name) drive-type is extern, not executing driving commands";
     }
 
-    return undef;
+    $hash->{stoptime} = int(gettimeofday()+$time);
+    InternalTimer($hash->{stoptime}, "ROLLO_Timer", $hash, 1);
+    Log3 $name,4,"ROLLO ($name) stop in $time seconds.";
+  }
+
+  return undef;
 }
 
-#****************************************************************************
 sub ROLLO_Timer($) {
-    my ($hash) = @_;
-    my $name = $hash->{NAME};
-    Log3 $name, 5, "ROLLO ($name) >> Timer";
+  my ($hash) = @_;
+  my $name = $hash->{NAME};
+  Log3 $name,5,"ROLLO ($name) >> Timer";
 
-    my $pct = ReadingsVal( $name, "desired_pct", 0 );
-    $pct = 100 - $pct if ( AttrVal( $name, "type", "normal" ) eq "HomeKit" );
+  my $pct = ReadingsVal($name,"desired_pct",0);
+  $pct = 100-$pct if (AttrVal($name,"type","normal") eq "HomeKit");
 
-    readingsSingleUpdate( $hash, "pct", $pct, 1 );
-    ROLLO_Stop($hash);
+  readingsSingleUpdate($hash,"pct",$pct, 1);
+  ROLLO_Stop($hash);
 
-    return undef;
+  return undef;
 }
 
 #****************************************************************************
 sub ROLLO_Stop($) {
-    my ($hash) = @_;
-    my $name = $hash->{NAME};
+  my ($hash) = @_;
+  my $name = $hash->{NAME};
+  Log3 $name,5,"ROLLO ($name) >> Stop";
 
-    #my $command = ReadingsVal($name,"command","stop");
+  RemoveInternalTimer($hash);
+  my $pct = ReadingsVal($name,"pct",0);
+  $pct = 100-$pct if (AttrVal($name,"type","normal") eq "HomeKit");
+  my $state = ReadingsVal($name,"state","");
 
-    Log3 $name, 5, "ROLLO ($name) >> Stop";
+  Log3 $name,4,"ROLLO ($name): stops from $state at pct $pct";
 
-    RemoveInternalTimer($hash);
-    my $pct = ReadingsVal( $name, "pct", 0 );
-    $pct = 100 - $pct if ( AttrVal( $name, "type", "normal" ) eq "HomeKit" );
-    my $state = ReadingsVal( $name, "state", "" );
+  #wenn autostop=1 und pct <> 0+100 und rollo fährt, dann kein stopbefehl ausführen...
+  if( ($state =~ /drive-/ && $pct > 0 && $pct < 100 ) || AttrVal($name, "autoStop", 0) ne 1) {
+    my $command = AttrVal($name,'commandStop',"");
+    $command = AttrVal($name,'commandStopUp',"") if(defined($attr{$name}{commandStopUp}));
+    $command = AttrVal($name,'commandStopDown',"") if(defined($attr{$name}{commandStopDown}) && $state eq "drive-down");
 
-    Log3 $name, 4, "ROLLO ($name): stops from $state at pct $pct";
-
-    #wenn autostop=1 und pct <> 0+100 und rollo fährt, dann kein stopbefehl ausführen...
-    if ( ( $state =~ /drive-/ && $pct >= 0 && $pct <= 100 ) || AttrVal( $name, "autoStop", 0 ) ne 1 ) {
-        my $command = AttrVal( $name, 'commandStop', "" );
-        $command = AttrVal( $name, 'commandStopUp', "" ) if ( defined( $attr{$name}{commandStopUp} ) );
-        $command = AttrVal( $name, 'commandStopDown', "" )
-          if ( defined( $attr{$name}{commandStopDown} ) && $state eq "drive-down" );
-
-        # NUR WENN NICHT BEREITS EXTERN GESTOPPT
-        if ( ReadingsVal( $name, "drive-type", "undef" ) ne "extern" ) {
-            fhem("$command") if ( $command ne "" );
-            Log3 $name, 4, "ROLLO ($name) stopped by excute the command: $command";
-        }
-        else {
-            readingsSingleUpdate( $hash, "drive-type", "na", 1 );
-            Log3 $name, 4, "ROLLO ($name) is in drive-type extern";
-        }
+    # NUR WENN NICHT BEREITS EXTERN GESTOPPT
+    if (ReadingsVal($name,"drive-type","undef") ne "extern") {
+      fhem("$command") if ($command ne "");
+      Log3 $name,4,"ROLLO ($name) stopped by excute the command: $command";
+    } else {
+      readingsSingleUpdate($hash,"drive-type","na",1);
+      Log3 $name,4,"ROLLO ($name) is in drive-type extern";
     }
-    else {
-        Log3 $name, 4, "ROLLO ($name) drives to end pct and autostop is enabled. No stop command executed";
-    }
+  } else {
+    Log3 $name,4,"ROLLO ($name) drives to end pct and autostop is enabled. No stop command executed";
+  }
 
-    if ( ReadingsVal( $name, "blocked", "0" ) eq "1" && AttrVal( $name, "blockMode", "none" ) ne "none" ) {
-        readingsSingleUpdate( $hash, "state", "blocked", 1 );
-    }
-    else {
-        #Runden der pct auf volle 10%-Schritte für das Icon
-        my $newpos = int( $pct / 10 + 0.5 ) * 10;
-        $newpos = 0   if ( $newpos < 0 );
-        $newpos = 100 if ( $newpos > 100 );
+  if(ReadingsVal($name,"blocked","0") eq "1" && AttrVal($name,"blockMode","none") ne "none") {
+    readingsSingleUpdate($hash,"state","blocked",1);
+  } else {
+    #Runden der pct auf volle 10%-Schritte für das Icon
+    my $newpos = int($pct/10+0.5)*10;
+    $newpos = 0 if($newpos < 0);
+    $newpos = 100 if ($newpos > 100);
 
-        my $state;
+    my $state;
+    #pct in text umwandeln
+    my %rhash = reverse %pcts;
 
-        #pct in text umwandeln
-        my %rhash = reverse %pcts;
-
-        if ( defined( $rhash{$newpos} ) ) {
-
-            #ich kenne keinen Text für die pct, also als pct-nn anzeigen
-            $state = $rhash{$newpos};
-        }
-        else {
-            $newpos = 100 - $newpos if ( AttrVal( $name, "type", "normal" ) eq "HomeKit" );
-            $state = "pct-$newpos";
-        }
-
-        readingsSingleUpdate( $hash, "state", $state, 1 );
+    if (defined($rhash{$newpos})) {
+			#ich kenne keinen Text für die pct, also als pct-nn anzeigen
+      $state = $rhash{$newpos};
+    } else {
+      $newpos = 100-$newpos if (AttrVal($name,"type","normal") eq "HomeKit");
+      $state = "pct-$newpos";
     }
 
-    return undef;
+    readingsSingleUpdate($hash,"state",$state,1);
+  }
+
+  return undef;
 }
-
 #****************************************************************************
 sub ROLLO_calculatepct(@) {
-    my ( $hash, $name ) = @_;
-    my ($pct);
-    Log3 $name, 5, "ROLLO ($name) >> calculatepct";
+  my ($hash,$name) = @_;
+  my ($pct);
+  Log3 $name,5,"ROLLO ($name) >> calculatepct";
 
-    my $type = AttrVal( $name, "type", "normal" );
-    my $start = ReadingsVal( $name, "pct", 100 );
-    $start = 100 - $start if $type eq "HomeKit";
+  my $type = AttrVal($name,"type","normal");
+  my $start = ReadingsVal($name,"pct",100);
+  $start = 100-$start if $type eq "HomeKit";
 
-    my $end = ReadingsVal( $name, "desired_pct", 0 );
-    my $drivetime_rest = int( $hash->{stoptime} - gettimeofday() );    #die noch zu fahrenden Sekunden
-    my $drivetime_total =
-      ( $start < $end ) ? AttrVal( $name, 'secondsDown', undef ) : AttrVal( $name, 'secondsUp', undef );
+  my $end   = ReadingsVal($name,"desired_pct",0);
+  my $drivetime_rest  = int($hash->{stoptime}-gettimeofday()); #die noch zu fahrenden Sekunden
+  my $drivetime_total = ($start < $end) ? AttrVal($name,'secondsDown',undef) : AttrVal($name,'secondsUp',undef);
 
-    # bsp: die fahrzeit von 0->100 ist 26sec. ich habe noch 6sec. zu fahren...was bedeutet das?
-    # excessTop    = 5sec
-    # driveTimeDown=20sec -> hier wird von 0->100 gezählt, also pro sekunde 5 Schritte
-    # excessBottom = 1sec
-    # aktuelle pct = 6sec-1sec=5sec pctsfahrzeit=25steps=pct75
+  # bsp: die fahrzeit von 0->100 ist 26sec. ich habe noch 6sec. zu fahren...was bedeutet das?
+  # excessTop    = 5sec
+  # driveTimeDown=20sec -> hier wird von 0->100 gezählt, also pro sekunde 5 Schritte
+  # excessBottom = 1sec
+  # aktuelle pct = 6sec-1sec=5sec pctsfahrzeit=25steps=pct75
 
-    #Frage1: habe ich noch "tote" Sekunden vor mir wegen endpct?
-    my $resetTime = AttrVal( $name, 'resetTime', 0 );
-    $drivetime_rest -= ( AttrVal( $name, 'excessTop',    0 ) + $resetTime ) if ( $end == 0 );
-    $drivetime_rest -= ( AttrVal( $name, 'excessBottom', 0 ) + $resetTime ) if ( $end == 100 );
-
+  #Frage1: habe ich noch "tote" Sekunden vor mir wegen endpct?
+  my $resetTime = AttrVal($name,'resetTime',0);
+  $drivetime_rest -= (AttrVal($name,'excessTop',0) + $resetTime)  if($end == 0);
+  $drivetime_rest -= (AttrVal($name,'excessBottom',0) + $resetTime) if($end == 100);
   #wenn ich schon in der nachlaufzeit war, setze ich die pct auf 99, dann kann man nochmal für die nachlaufzeit starten
-    if ( $start == $end ) {
-        $pct = $end;
-    }
-    elsif ( $drivetime_rest < 0 ) {
-        $pct = ( $start < $end ) ? 99 : 1;
-    }
-    else {
-        $pct = $drivetime_rest / $drivetime_total * 100;
-        $pct = ( $start < $end ) ? $end - $pct : $end + $pct;
-        $pct = 0 if ( $pct < 0 );
-        $pct = 100 if ( $pct > 100 );
-    }
+  if ($start == $end) {
+    $pct = $end;
+  } elsif ($drivetime_rest < 0) {
+     $pct = ($start < $end) ? 99 : 1;
+  } else {
+    $pct = $drivetime_rest/$drivetime_total*100;
+    $pct = ($start < $end) ? $end-$pct : $end+$pct;
+    $pct = 0 if($pct < 0);
+    $pct = 100 if($pct > 100);
+  }
 
-    #aktuelle pct aktualisieren und zurückgeben
-    Log3 $name, 4, "ROLLO ($name) calculated pct is $pct; rest drivetime is $drivetime_rest";
-    my $savepos = $pct;
-    $savepos = 100 - $pct if $type eq "HomeKit";
-    readingsSingleUpdate( $hash, "pct", $savepos, 100 );
+  #aktuelle pct aktualisieren und zurückgeben
+  Log3 $name,4,"ROLLO ($name) calculated pct is $pct; rest drivetime is $drivetime_rest";
+  my $savepos = $pct;
+  $savepos = 100-$pct if $type eq "HomeKit";
+  readingsSingleUpdate($hash,"pct",$savepos,100);
 
-    return $pct;
+  return $pct;
 }
-
-#****************************************************************************
-sub ROLLO_calculateDesiredPosition(@) {
-    my ( $hash, $name ) = @_;
-    my ($pct);
-    Log3 $name, 5, "ROLLO ($name) >> calculateDesiredPosition";
-
-    my $start     = 0;
-    my $dtime     = $hash->{driveTime};
-    my $direction = $hash->{driveDir};
-    Log3 $name, 4, "ROLLO ($name) drive $direction for $dtime";
-    my ( $time, $steps );
-    if ( $direction eq "up" ) {
-        $time = AttrVal( $name, 'secondsUp', undef );
-        $start = 100;
-    }
-    else {
-        $time = AttrVal( $name, 'secondsDown', undef );
-        $start = 0;
-    }
-
-    my $startPos = ReadingsVal( $name, "pct", 100 );
-
-    $time += AttrVal( $name, 'reactionTime', 0 );
-
-    #$time += AttrVal($name,'excessTop',0) if($startPos == 0);
-    #$time += AttrVal($name,'excessBottom',0) if($startPos == 100);
-    #$time += AttrVal($name,'resetTime', 0) if($startPos == 0 or $startPos == 100);
-
-    $steps = $dtime / $time * 100;
-    Log3 $name, 4, "ROLLO ($name) total time = $time, we're intending to drive $steps steps";
-    if ( $direction eq "up" ) {
-        $pct = $startPos - $steps;
-    }
-    else {
-        $pct = $startPos + $steps;
-    }
-    $pct = 100 if ( $pct > 100 );
-    $pct = 0   if ( $pct < 0 );
-
-    Log3 $name, 4, "ROLLO ($name) Target pct is $pct";
-    return int($pct);
-}
-
 #****************************************************************************
 sub ROLLO_calculateDriveTime(@) {
-    my ( $name, $oldpos, $newpos, $direction ) = @_;
-    Log3 $name, 5, "ROLLO ($name) >> calculateDriveTime | going $direction: from $oldpos to $newpos";
+  my ($name,$oldpos,$newpos,$direction) = @_;
+  Log3 $name,5,"ROLLO ($name) >> calculateDriveTime | going $direction: from $oldpos to $newpos";
 
-    my ( $time, $steps );
-    if ( $direction eq "up" ) {
-        $time = AttrVal( $name, 'secondsUp', undef );
-        $steps = $oldpos - $newpos;
-    }
-    else {
-        $time = AttrVal( $name, 'secondsDown', undef );
-        $steps = $newpos - $oldpos;
-    }
-    if ( $steps == 0 ) {
-        Log3 $name, 4, "ROLLO ($name):already at position!";
+  my ($time, $steps);
+  if ($direction eq "up") {
+    $time = AttrVal($name,'secondsUp',undef);
+    $steps = $oldpos-$newpos;
+  } else {
+    $time = AttrVal($name,'secondsDown',undef);
+    $steps = $newpos-$oldpos;
+  }
 
-        # Wenn force-Drive gesetzt ist fahren wir immer 100% (wenn "open" oder "closed")
-        if ( AttrVal( $name, "forceDrive", undef ) == 1 && ( $oldpos == 0 || $oldpos == 100 ) ) {
-            Log3 $name, 4, "ROLLO ($name): forceDrive set, driving $direction";
-            $steps = 100;
-        }
-    }
+  Log3 $name,4,"already at pct!" if ($steps == 0);
 
-    if ( !defined($time) ) {
-        Log3 $name, 2, "ERROR: missing attribute secondsUp or secondsDown";
-        $time = 60;
-    }
+  if(!defined($time)) {
+    Log3 $name,2,"ERROR: missing attribute secondsUp or secondsDown";
+    $time = 60;
+  }
 
-    my $drivetime = $time * $steps / 100;
+  my $drivetime = $time*$steps/100;
+  $drivetime += AttrVal($name,'reactionTime',0) if($time > 0 && $steps > 0);
 
-    # reactionTime etc... sollten nur hinzugefügt werden, wenn auch gefahren wird...
-    if ( $drivetime > 0 ) {
-        $drivetime += AttrVal( $name, 'reactionTime', 0 ) if ( $time > 0 && $steps > 0 );
+  $drivetime += AttrVal($name,'excessTop',0) if($oldpos == 0 or $newpos == 0);
+  $drivetime += AttrVal($name,'excessBottom',0) if($oldpos == 100 or $newpos == 100);
+  $drivetime += AttrVal($name,'resetTime', 0) if($newpos == 0 or $newpos == 100);
 
-        $drivetime += AttrVal( $name, 'excessTop',    0 ) if ( $oldpos == 0   or $newpos == 0 );
-        $drivetime += AttrVal( $name, 'excessBottom', 0 ) if ( $oldpos == 100 or $newpos == 100 );
-        $drivetime += AttrVal( $name, 'resetTime',    0 ) if ( $newpos == 0   or $newpos == 100 );
-        Log3 $name, 4,
-"ROLLO ($name) calculateDriveTime: oldpos=$oldpos,newpos=$newpos,direction=$direction,time=$time,steps=$steps,drivetime=$drivetime";
-
-    }
-    return $drivetime;
+  Log3 $name,4,"ROLLO ($name) calculateDriveTime: oldpos=$oldpos,newpos=$newpos,direction=$direction,time=$time,steps=$steps,drivetime=$drivetime";
+  return $drivetime;
 }
 
 ################################################################### GET #####
 sub ROLLO_Get($@) {
-    my ( $hash, @a ) = @_;
-    my $name = $hash->{NAME};
-    Log3 $name, 5, "ROLLO ($name) >> Get";
+  my ($hash, @a) = @_;
+  my $name = $hash->{NAME};
+  Log3 $name,5,"ROLLO ($name) >> Get";
 
-    #-- get version
-    if ( $a[1] eq "version" ) {
-        return "$name.version => $version";
-    }
-    if ( @a < 2 ) {
-        Log3 $name, 2, "ERROR: \"get ROLLO\" needs at least one argument";
-        return "\"get ROLLO\" needs at least one argument";
-    }
+  #-- get version
+  if( $a[1] eq "version") {
+    return "$name.version => $version";
+  }
+  if ( @a < 2 ) {
+    Log3 $name,2, "ERROR: \"get ROLLO\" needs at least one argument";
+    return "\"get ROLLO\" needs at least one argument";
+  }
 
-    my $cmd = $a[1];
-    if ( !$gets{$cmd} ) {
-        my @cList = keys %gets;
-        Log3 $name, 3, "ERROR: Unknown argument $cmd, choose one of " . join( " ", @cList ) if ( $cmd ne "?" );
-        return "Unknown argument $cmd, choose one of " . join( " ", @cList );
-    }
+  my $cmd = $a[1];
+  if(!$gets{$cmd}) {
+    my @cList = keys %gets;
+    Log3 $name,3,"ERROR: Unknown argument $cmd, choose one of " . join(" ", @cList) if ($cmd ne "?");
+    return "Unknown argument $cmd, choose one of " . join(" ", @cList);
+  }
 
-    my $val = "";
-    $val = $a[2] if ( @a > 2 );
-    Log3 $name, 4, "ROLLO ($name) command: $cmd, value: $val";
+  my $val = "";
+  $val = $a[2] if (@a > 2);
+  Log3 $name,4,"ROLLO ($name) command: $cmd, value: $val";
 }
 
 ################################################################## ATTR #####
 sub ROLLO_Attr(@) {
-    my ( $cmd, $name, $aName, $aVal ) = @_;
-    Log3 $name, 5, "ROLLO ($name) >> Attr";
+  my ($cmd,$name,$aName,$aVal) = @_;
+  Log3 $name,5,"ROLLO ($name) >> Attr";
 
-    if ( $cmd eq "set" ) {
-        if ( $aName eq "Regex" ) {
-            eval { qr/$aVal/ };
-            if ($@) {
-                Log3 $name, 2, "ROLLO ($name):ERROR Invalid regex in attr $name $aName $aVal: $@";
-                return "Invalid Regex $aVal";
-            }
-        }
-
-        #Auswertung von HomeKit und dem Logo
-        if ( $aName eq "type" ) {
-
-     #auslesen des aktuellen Icon, wenn es nicht gesetzt ist, oder dem default entspricht, dann neue Zuweisung vornehmen
-            my $iconNormal =
-'open:fts_shutter_10:closed closed:fts_shutter_100:open half:fts_shutter_50:closed drive-up:fts_shutter_up@red:stop drive-down:fts_shutter_down@red:stop pct-100:fts_shutter_100:open pct-90:fts_shutter_80:closed pct-80:fts_shutter_80:closed pct-70:fts_shutter_70:closed pct-60:fts_shutter_60:closed pct-50:fts_shutter_50:closed pct-40:fts_shutter_40:open pct-30:fts_shutter_30:open pct-20:fts_shutter_20:open pct-10:fts_shutter_10:open pct-0:fts_shutter_10:closed';
-            my $iconHomeKit =
-'open:fts_shutter_10:closed closed:fts_shutter_100:open half:fts_shutter_50:closed drive-up:fts_shutter_up@red:stop drive-down:fts_shutter_down@red:stop pct-100:fts_shutter_10:open pct-90:fts_shutter_10:closed pct-80:fts_shutter_20:closed pct-70:fts_shutter_30:closed pct-60:fts_shutter_40:closed pct-50:fts_shutter_50:closed pct-40:fts_shutter_60:open pct-30:fts_shutter_70:open pct-20:fts_shutter_80:open pct-10:fts_shutter_90:open pct-0:fts_shutter_100:closed';
-            my $iconAktuell = AttrVal( $name, "devStateIcon", "kein" );
-
-            fhem("attr $name devStateIcon $iconHomeKit")
-              if ( ( $aVal eq "HomeKit" ) && ( ( $iconAktuell eq $iconNormal ) || ( $iconAktuell eq "kein" ) ) );
-            fhem("attr $name devStateIcon $iconNormal")
-              if ( ( $aVal eq "normal" ) && ( ( $iconAktuell eq $iconHomeKit ) || ( $iconAktuell eq "kein" ) ) );
-        }
+  if ($cmd eq "set") {
+    if ($aName eq "Regex") {
+      eval { qr/$aVal/ };
+      if ($@) {
+        Log3 $name, 2, "ROLLO ($name):ERROR Invalid regex in attr $name $aName $aVal: $@";
+        return "Invalid Regex $aVal";
+      }
     }
-    return undef;
+
+    #Auswertung von HomeKit und dem Logo
+    if ($aName eq "type") {
+      #auslesen des aktuellen Icon, wenn es nicht gesetzt ist, oder dem default entspricht, dann neue Zuweisung vornehmen
+      my $iconNormal  = 'open:fts_shutter_10:closed closed:fts_shutter_100:open half:fts_shutter_50:closed drive-up:fts_shutter_up@red:stop drive-down:fts_shutter_down@red:stop pct-100:fts_shutter_100:open pct-90:fts_shutter_80:closed pct-80:fts_shutter_80:closed pct-70:fts_shutter_70:closed pct-60:fts_shutter_60:closed pct-50:fts_shutter_50:closed pct-40:fts_shutter_40:open pct-30:fts_shutter_30:open pct-20:fts_shutter_20:open pct-10:fts_shutter_10:open pct-0:fts_shutter_10:closed';
+      my $iconHomeKit = 'open:fts_shutter_10:closed closed:fts_shutter_100:open half:fts_shutter_50:closed drive-up:fts_shutter_up@red:stop drive-down:fts_shutter_down@red:stop pct-100:fts_shutter_10:open pct-90:fts_shutter_10:closed pct-80:fts_shutter_20:closed pct-70:fts_shutter_30:closed pct-60:fts_shutter_40:closed pct-50:fts_shutter_50:closed pct-40:fts_shutter_60:open pct-30:fts_shutter_70:open pct-20:fts_shutter_80:open pct-10:fts_shutter_90:open pct-0:fts_shutter_100:closed';
+      my $iconAktuell = AttrVal($name,"devStateIcon","kein");
+
+      fhem("attr $name devStateIcon $iconHomeKit") if (($aVal eq "HomeKit") && (($iconAktuell eq $iconNormal) || ($iconAktuell eq "kein")));
+      fhem("attr $name devStateIcon $iconNormal") if (($aVal eq "normal") && (($iconAktuell eq $iconHomeKit) || ($iconAktuell eq "kein")));
+    }
+  }
+  return undef;
 }
 
 1;
@@ -839,10 +691,6 @@ sub ROLLO_Attr(@) {
 					<br />if disabled the additional module ROLLO_AUTOMATIC don't drive the shutter</li>
 				<li><a name="rollo_automatic-delay"><code>attr &lt;Rollo-Device&gt; automatic-delay	&lt;number&gt;</code></a>
 					<br />if set any ROLLO_AUTOMATIC  commandy are executed delayed (in minutes)<br></li>
-				<li><a name="rollo_forceDrive"><code>attr &lt;Rollo-Device&gt; forceDrive [0|1]</code></a>
-					<br />force open/closed even if device is already in target position<br></li>
-				<li><a name="rollo_noSetPosBlocked"><code>attr &lt;Rollo-Device&gt; noSetPosBlocked [0|1]</code></a>
-					<br />if disabled positions may be set even if device is blocked. After unblocking it will drive to the position.<br></li>
 				<li><a href="#readingFnAttributes">readingFnAttributes</a></li>
 			</ul>
 </ul>
