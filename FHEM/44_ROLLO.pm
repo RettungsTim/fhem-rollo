@@ -372,6 +372,7 @@ sub ROLLO_Start($) {
 
   my $direction = "down";
   $direction = "up" if ($pct > $desired_pct || $desired_pct == 0);
+  if ($hash->{driveDir}) {$direction = $hash->{driveDir}};
   Log3 $name,4,"ROLLO ($name) pct: $pct -> $desired_pct / direction: $direction";
 
   #Ich fahre ja gerade...wo bin ich aktuell?
