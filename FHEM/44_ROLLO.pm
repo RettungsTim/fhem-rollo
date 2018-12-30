@@ -163,7 +163,9 @@ sub ROLLO_Set($@) {
         Log3 $name, 2, "ERROR: Unknown command $cmd, choose one of $param" if ( $cmd ne "?" );
         return "Unknown argument $cmd, choose one of $param";
     }
-
+	
+	
+	#### Stop if not driving - do we need that? 
     if ( ( $cmd eq "stop" ) && ( ReadingsVal( $name, "state", '' ) !~ /drive/ ) ) {
         Log3 $name, 3, "WARNING: command is stop but shutter is not driving!";
         RemoveInternalTimer($hash);
@@ -171,6 +173,8 @@ sub ROLLO_Set($@) {
         return undef;
     }
 
+	
+	##### Commands without IO
     if ( $cmd eq "extern" ) {
         readingsSingleUpdate( $hash, "drive-type", "extern", 1 );
         $cmd = $arg;
@@ -187,6 +191,7 @@ sub ROLLO_Set($@) {
         return undef;
     }
 
+	##### Block commands
     if ( $cmd eq "blocked" ) {
         ROLLO_Stop($hash);
         readingsSingleUpdate( $hash, "blocked", "1", 1 );
@@ -200,9 +205,13 @@ sub ROLLO_Set($@) {
         readingsSingleUpdate( $hash, "blocked", "0", 1 );
         ROLLO_Stop($hash);    #add KernSani
         ROLLO_Start($hash);
-        fhem("deletereading $name blocked");
+		#avoid the deletereading mesage in Log  - KernSani 30.12.2018
+        #fhem("deletereading $name blocked");   
+		readingsDelete($hash, "blocked");
         return;
     }
+	
+	##### Drive for Seconds - Basic Implementation (doesn't consider block mode, Homekit, ...) 
     if ( $cmd eq "drive" ) {
 		return "Drive needs two arguments, the direction and the time in seconds" if (!$arg2);
         my $direction = $arg;
@@ -212,14 +221,16 @@ sub ROLLO_Set($@) {
 		$hash->{driveDir} = $direction;
 		my $dpct = ROLLO_calculateDesiredPosition($hash,$name);
 		readingsSingleUpdate($hash,"desired_pct",$dpct,1);
-        Log3 $name, 3, "DRIVE Command drive $direction for $time seconds. ";
+        Log3 $name, 3, "ROLLO ($name) DRIVE Command drive $direction for $time seconds. ";
         ROLLO_Stop($hash);
         ROLLO_Drive( $hash, $time, $direction, $cmd );
         return undef;
     }
 
+	##### now do the real drive stuff
+	
     my $desiredPos = $cmd;
-    Log3 $name, 3, "DesiredPos set to $desiredPos, ($arg) ";
+    Log3 $name, 5, "ROLLO ($name) DesiredPos set to $desiredPos, ($arg) ";
     my $typ = AttrVal( $name, "type", "normal" );
 
     # Allow all positions
@@ -229,15 +240,14 @@ sub ROLLO_Set($@) {
     if ($arg && $arg =~ /^[0-9,.E]*$/ && $arg >= 0 && $arg <= 100 )
       #if ($arg >= 0 && $arg <= 100 )
     {
-        Log3 $name, 5, "We have an Arg $arg,$cmd";
         if ( $cmd eq "pct" ) {
             if ( $typ eq "HomeKit" ) {
-                Log3 $name, 4, "invert pct from $arg to (100-$arg)";
+                Log3 $name, 4, "ROLLO ($name) invert pct from $arg to (100-$arg)";
                 $arg = 100 - $arg;
             }
             $cmd        = "pct-" . $arg;
             $desiredPos = $arg;
-            Log3 $name, 3, "DesiredPos now $desiredPos, $arg";
+            Log3 $name, 5, "ROLLO ($name) DesiredPos now $desiredPos, $arg";
         }
         else { #I think this shouldn't happen... 
             if ( $typ eq "HomeKit" ) {
@@ -245,6 +255,7 @@ sub ROLLO_Set($@) {
             }
             $cmd        = "pct-" . $cmd;
             $desiredPos = $cmd;
+			Log3 $name, 5, "ROLLO ($name) There is an arg $arg, but command is $cmd";
         }
     }
     else {
@@ -264,13 +275,8 @@ sub ROLLO_Set($@) {
 		
 		# Ich verstehe nicht wann nachfolgender Zustand eintreten kann, das Coding führt aber dazu, dass pct 0 (open) auf "none" gesetzt wird 
         #$desiredPos = "none" if !$desiredPos || $desiredPos eq "";  
-		
-		
-			
-        Log3 $name, 4, "ROLLO ($name) set desired pct $desiredPos";
     }
-
-    Log3 $name, 3, "DesiredPos now $desiredPos, $cmd";
+    Log3 $name, 5, "ROLLO ($name) DesiredPos now $desiredPos, $cmd";
 
     #wenn ich gerade am fahren bin und eine neue Zielposition angefahren werden soll,
     # muss ich jetzt erst mal meine aktuelle Position berechnen und updaten
@@ -306,6 +312,7 @@ sub ROLLO_isAllowed($$$) {
         return 1;
     }
     my $pct = ReadingsVal( $name, "pct", undef );
+	$pct = 100 - $pct if ( AttrVal( $name, "type", "normal" ) eq "HomeKit" );   # KernSani 30.12.2018
     my $blockmode = AttrVal( $name, "blockMode", "none" );
     Log3 $name, 3, "ROLLO ($name) >> Blockmode:$blockmode $pct-->$desired_pct";
     if (   $blockmode eq "blocked"
@@ -374,7 +381,7 @@ sub ROLLO_Start($) {
 
     if ( ReadingsVal( $name, "blocked", "0" ) eq "1" && $command ne "stop" ) {
         my $blockmode = AttrVal( $name, "blockMode", "none" );
-        Log3 $name, 4, "block mode: $blockmode - $pct to $desired_pct?";
+        Log3 $name, 4, "ROLLO ($name) block mode: $blockmode - $pct to $desired_pct?";
 
         if ( $blockmode eq "blocked" ) {
             readingsSingleUpdate( $hash, "state", "blocked", 1 );
@@ -408,6 +415,8 @@ sub ROLLO_Start($) {
             readingsSingleUpdate( $hash, "state", "blocked", 1 );
             return;
         }
+		#desired_pct has to be updated - KernSani 30.12.2018
+		readingsSingleUpdate( $hash, "desired_pct", $desired_pct, 1 );
     }
 
     my $direction = "down";
@@ -479,7 +488,7 @@ sub ROLLO_Stop($) {
     $pct = 100 - $pct if ( AttrVal( $name, "type", "normal" ) eq "HomeKit" );
     my $state = ReadingsVal( $name, "state", "" );
 
-    Log3 $name, 4, "ROLLO ($name): stops from $state at pct $pct";
+    Log3 $name, 4, "ROLLO ($name) stops from $state at pct $pct";
 
     #wenn autostop=1 und pct <> 0+100 und rollo fährt, dann kein stopbefehl ausführen...
     if ( ( $state =~ /drive-/ && $pct >= 0 && $pct <= 100 ) || AttrVal( $name, "autoStop", 0 ) ne 1 ) {
@@ -491,7 +500,7 @@ sub ROLLO_Stop($) {
         # NUR WENN NICHT BEREITS EXTERN GESTOPPT
         if ( ReadingsVal( $name, "drive-type", "undef" ) ne "extern" ) {
             fhem("$command") if ( $command ne "" );
-            Log3 $name, 4, "ROLLO ($name) stopped by excute the command: $command";
+            Log3 $name, 4, "ROLLO ($name) stopped by excuting the command: $command";
         }
         else {
             readingsSingleUpdate( $hash, "drive-type", "na", 1 );
@@ -639,7 +648,7 @@ sub ROLLO_calculateDriveTime(@) {
         $steps = $newpos - $oldpos;
     }
     if ( $steps == 0 ) {
-        Log3 $name, 4, "ROLLO ($name):already at position!";
+        Log3 $name, 4, "ROLLO ($name) already at position!";
 
         # Wenn force-Drive gesetzt ist fahren wir immer 100% (wenn "open" oder "closed")
         if ( AttrVal( $name, "forceDrive", undef ) == 1 && ( $oldpos == 0 || $oldpos == 100 ) ) {
@@ -649,7 +658,7 @@ sub ROLLO_calculateDriveTime(@) {
     }
 
     if ( !defined($time) ) {
-        Log3 $name, 2, "ERROR: missing attribute secondsUp or secondsDown";
+        Log3 $name, 2, "ROLLO ($name) ERROR: missing attribute secondsUp or secondsDown";
         $time = 60;
     }
 
@@ -680,7 +689,7 @@ sub ROLLO_Get($@) {
         return "$name.version => $version";
     }
     if ( @a < 2 ) {
-        Log3 $name, 2, "ERROR: \"get ROLLO\" needs at least one argument";
+        Log3 $name, 2, "ROLLO ($name) ERROR: \"get ROLLO\" needs at least one argument";
         return "\"get ROLLO\" needs at least one argument";
     }
 
