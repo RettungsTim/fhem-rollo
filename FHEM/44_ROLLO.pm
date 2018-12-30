@@ -732,101 +732,109 @@ sub ROLLO_Attr(@) {
 1;
 
 =pod
+=item helper
+=item summary Universal module to precisely control shutters/blinds which support only open/close/stop
+=item summary_DE Universelles Modul um Rollladen die nur open/close/stop unterstützen päzise zu steuern
 =begin html
 
 <a name="ROLLO"></a>
 <h3>ROLLO</h3>
 <ul>
-<p>The module ROLLO offers easy away to steer the shutter with one or two relays and to stop point-exactly. <br>
-			Moreover, the topical pct is illustrated in fhem. About which hardware the exits are appealed, besides, makes no difference. <br />
+<p>The module ROLLO offers an easy away to control shutters with one or two relays and to stop them exactly. <br>
+			The current position (in %) will be displayed in fhem. It doesn't matter which hardware is used to control the shutters as long as they are working with FHEM. <br />
 			<h4>Example</h4>
 			<p>
 				<code>define TestRollo ROLLO</code>
 				<br />
 			</p><a name="ROLLO_Define"></a>
+			
 			<h4>Define</h4>
 			<p>
 				<code>define &lt;Rollo-Device&gt; ROLLO</code>
 				<br /><br /> Define a ROLLO instance.<br />
 			</p>
-			 <a name="ROLLO_Set"></a>
+	 <a name="ROLLO_Set"></a>
 	 <h4>Set</h4>
 			<ul>
-				<li><a name="rollo_open">
-						<code>set &lt;Rollo-Device&gt; open</code></a><br />
+				<li><a name="open">open</a>
+						<code>set &lt;Rollo-Device&gt; open</code><br />
 						opens the shutter (pct 0) </li>
-				<li><a name="rollo_closed">
-						<code>set &lt;Rollo-Device&gt; closed</code></a><br />
+				<li><a name="closed">closed</a>
+						<code>set &lt;Rollo-Device&gt; closed</code><br />
 						close the shutter (pct 100) </li>
-				<li><a name="rollo_up">
-						<code>set &lt;Rollo-Device&gt; up</code></a><br />
+				<li><a name="up">up</a>
+						<code>set &lt;Rollo-Device&gt; up</code><br />
 						opens the shutter one step (pct +10) </li>
-				<li><a name="rollo_down">
-						<code>set &lt;Rollo-Device&gt; down</code></a><br />
+				<li><a name="down">down</a>
+						<code>set &lt;Rollo-Device&gt; down</code><br />
 						close the shutter one step (pct -10) </li>
-				<li><a name="rollo_half">
-						<code>set &lt;Rollo-Device&gt; half</code></a><br />
+				<li><a name="half">half</a>
+						<code>set &lt;Rollo-Device&gt; half</code><br />
 						drive the shutter to half open (pct 50) </li>
-				<li><a name="rollo_stop">
-						<code>set &lt;Rollo-Device&gt; stop</code></a><br />
+				<li><a name="stop">stop</a>
+						<code>set &lt;Rollo-Device&gt; stop</code><br />
 						stop a driving shutter</li>
-				<li><a name="rollo_blocked">
-						<code>set &lt;Rollo-Device&gt; blocked</code></a><br />
-						when activated, the shutter can moved only restricted. See attribute block_mode for further details.</li>
-				<li><a name="rollo_unblocked">
-						<code>set &lt;Rollo-Device&gt; unblocked</code></a><br />
+				<li><a name="drive">drive</a>
+						<code>set &lt;Rollo-Device&gt; drive up 5</code><br />
+						Drives the shutter in the specified direction for the specified time (in seconds)</li>
+				<li><a name="blocked">blocked</a>
+						<code>set &lt;Rollo-Device&gt; blocked</code><br />
+						when activated, the shutter can move only restricted. See attribute block_mode for further details.</li>
+				<li><a name="unblocked">unblocked</a>
+						<code>set &lt;Rollo-Device&gt; unblocked</code><br />
 						unblock the shutter, so you can drive the shutter</li>
-				<li><a name="rollo_pct">
-						<code>set &lt;Rollo-Device&gt; pct &lt;value&gt;</code></a><br />
+				<li><a name="pct">pct</a>
+						<code>set &lt;Rollo-Device&gt; pct &lt;value&gt;</code><br />
 						drive the shutter to exact pct from 0 (open) to 100 (closed) </li>
-				<li><a name="rollo_reset">
-						<code>set &lt;Rollo-Device&gt; reset &lt;value&gt;</code></a><br />
+				<li><a name="reset">reset</a>
+						<code>set &lt;Rollo-Device&gt; reset &lt;value&gt;</code><br />
 						set the modul to real pct if the shutter pct changed outside from fhem</li>
-				<li><a name="rollo_extern">
-						<code>set &lt;Rollo-Device&gt; extern &lt;value&gt;</code></a><br />
-						if the shutter is started/stopped externaly, you can inform the modul so it can calculate the current pct</li>
+				<li><a name="extern">extern</a>
+						<code>set &lt;Rollo-Device&gt; extern &lt;value&gt;</code><br />
+						if the shutter is started/stopped externaly, you can inform the module so it can calculate the current pct</li>
 			</ul>
 			<a name="ROLLO_Get"></a>
 			<h4>Get</h4>
 			<ul>
-				<li><a name="rollo_version">
-						<code>get &lt;Rollo-Device&gt; version</code></a>
+				<li><a name="version">version</a>
+						<code>get &lt;Rollo-Device&gt; version</code>
 					<br /> Returns the version number of the FHEM ROLLO module</li>
 			</ul>
+			<a name="ROLLO_Attr"></a>
 			<h4>Attributes</h4>
 			<ul>
-				<li><a name="rollo_type"><code>attr &lt;Rollo-Device&gt; type [normal|HomeKit]</code></a>
+				<li><a name="type">type</a>
 					<br />Type differentiation to support different hardware. Depending on the selected type, the direction of which the pct is expected to set:<BR/>
 							normal = pct 0 means open, pct 100 means closed<BR/>
 							HomeKit = pct 100 means open, pct 0 means closed</li>
-				<li><a name="rollo_secondsDown"><code>attr &lt;Rollo-Device&gt; secondsDown	&lt;number&gt;</code></a>
+				<li><a name="secondsDown">secondsDown</a><code>attr &lt;Rollo-Device&gt; secondsDown	&lt;number&gt;</code>
 					<br />time in seconds needed to drive the shutter down</li>
-				<li><a name="rollo_secondsUp"><code>attr &lt;Rollo-Device&gt; secondsUp	&lt;number&gt;</code></a>
+				<li><a name="secondsUp">secondsUp</a><code>attr &lt;Rollo-Device&gt; secondsUp	&lt;number&gt;</code>
 					<br />time in seconds needed to drive the shutter up</li>
-				<li><a name="rollo_excessTop"><code>attr &lt;Rollo-Device&gt; excessTop	&lt;number&gt;</code></a>
+				<li><a name="excessTop">excessTop</a><code>attr &lt;Rollo-Device&gt; excessTop	&lt;number&gt;</code>
 					<br />additional time the shutter need from last visible top pct to the end pct</li>
-				<li><a name="rollo_excessBottom"><code>attr &lt;Rollo-Device&gt; excessBottom &lt;number&gt;</code></a>
+				<li><a name="excessBottom">excessBottom</a><code>attr &lt;Rollo-Device&gt; excessBottom &lt;number&gt;</code>
 					<br />additional time the shutter need from visible closed pct to the end pct</li>
-				<li><a name="rollo_switchTime"><code>attr &lt;Rollo-Device&gt; switchTime &lt;number&gt;</code></a>
+				<li><a name="switchTime">switchTime</a><code>attr &lt;Rollo-Device&gt; switchTime &lt;number&gt;</code>
 					<br />time for the shutter to switch from one driving direction to other driving direction</li>
-				<li><a name="rollo_resetTime"><code>attr &lt;Rollo-Device&gt; resetTime	&lt;number&gt;</code></a>
-					<br />additional time the shutter remain in driving state if driving to final pcts (open, closed), to ensure that the final pct was really approached. So difference in the pct calculation can be corrected.</li>
-				<li><a name="rollo_reactionTime"><code>attr &lt;Rollo-Device&gt; reactionTime &lt;number&gt;</code></a>
-					<br />additional time the shutter need to start (from start command to realy starting the motor)</li>
-				<li><a name="rollo_autoStop"><code>attr &lt;Rollo-Device&gt; autoStop [0|1]</code></a>
-					<br />It must be carried out no stop command, the shutter stops by itself.</li>
-				<li><a name="rollo_commandUp"><code>attr &lt;Rollo-Device&gt; commandUp &lt;string&gt;</code></a>
+				<li><a name="resetTime">resetTime</a><code>attr &lt;Rollo-Device&gt; resetTime	&lt;number&gt;</code>
+					<br />additional time the shutter remains in driving state if driving to final pcts (open, closed), to ensure that the final pct was really reached. So difference in the pct calculation can be corrected.</li>
+				<li><a name="reactionTime">reactionTime</a><code>attr &lt;Rollo-Device&gt; reactionTime &lt;number&gt;</code>
+					<br />additional time the shutter needs to start (from start command to really starting the motor)</li>
+				<li><a name="autoStop">autoStop</a><code>attr &lt;Rollo-Device&gt; autoStop [0|1]</code>
+					<br />No stop command should be sent, the shutter stops by itself.</li>
+				<li><a name="commandUp">commandUp</a><code>attr &lt;Rollo-Device&gt; commandUp &lt;string&gt;</code>
 					<br />Up to three commands you have to send to drive the shutter up</li>
-				<li><a name="rollo_commandDown"><code>attr &lt;Rollo-Device&gt; commandDown &lt;string&gt;</code></a>
-					<br />Up to three commandy you have to send to drive the shutter down</li>
-				<li><a name="rollo_commandStop"><code>attr &lt;Rollo-Device&gt; commandStop &lt;string&gt;</code></a>
+				<li><a name="commandDown">commandDown</a><code>attr &lt;Rollo-Device&gt; commandDown &lt;string&gt;</code>
+					<br />Up to three commands you have to send to drive the shutter down</li>
+				<li><a name="commandStop">commandStop1</a><code>attr &lt;Rollo-Device&gt; commandStop &lt;string&gt;</code>
 					<br />command to stop a driving shutter</li>
-				<li><a name="rollo_commandStopDown"><code>attr &lt;Rollo-Device&gt; commandStopDown &lt;string&gt;</code></a>
+				<li><a name="commandStopDown">commandStopDown</a><code>attr &lt;Rollo-Device&gt; commandStopDown &lt;string&gt;</code>
 					<br />command to stop a down driving shutter, if not set commandStop is executed</li>
-				<li><a name="rollo_commandStopUp"><code>attr &lt;Rollo-Device&gt; commandStopUp &lt;string&gt;</code></a>
+				<li><a name="commandStopUp">commandStopUp</a><code>attr &lt;Rollo-Device&gt; commandStopUp &lt;string&gt;</code>
 					<br />command to stop a up driving shutter, if not set commandStop is executed</li>
-				<li><a name="rollo_blockMode"><code>attr &lt;Rollo-Device&gt; blockMode [blocked|force-open|force-closed|only-up|only-down|half-up|half-down|none]</code></a>
-					<br />the possibility of the shutter in blocked mode:<br>
+				<li><a name="blockMode">blockMode</a><code>attr &lt;Rollo-Device&gt; blockMode [blocked|force-open|force-closed|only-up|only-down|half-up|half-down|none]</code>
+					<br />the possibilities of the shutter in blocked mode:<br>
 							blocked = shutter can't drive<br>
 							force-open = drive the shutter up if a drive command is send<br>
 							force-closed = drive the shutter down if a drive command is send<br>
@@ -835,13 +843,13 @@ sub ROLLO_Attr(@) {
 							half-up = only drive to pcts above half-up<br>
 							half-down = only drive to pcts below half-down<br>
 							none = blockmode is disabled</li>
-				<li><a name="rollo_automatic-enabled"><code>attr &lt;Rollo-Device&gt; automatic-enabled [yes|no]</code></a>
-					<br />if disabled the additional module ROLLO_AUTOMATIC don't drive the shutter</li>
-				<li><a name="rollo_automatic-delay"><code>attr &lt;Rollo-Device&gt; automatic-delay	&lt;number&gt;</code></a>
-					<br />if set any ROLLO_AUTOMATIC  commandy are executed delayed (in minutes)<br></li>
-				<li><a name="rollo_forceDrive"><code>attr &lt;Rollo-Device&gt; forceDrive [0|1]</code></a>
+				<li><a name="automatic-enabled">automatic-enabled</a><code>attr &lt;Rollo-Device&gt; automatic-enabled [yes|no]</code>
+					<br />if disabled the additional module ROLLO_AUTOMATIC doesn't drive the shutter</li>
+				<li><a name="automatic-delay">automatic-delay</a><code>attr &lt;Rollo-Device&gt; automatic-delay	&lt;number&gt;</code>
+					<br />if set any ROLLO_AUTOMATIC commands are executed delayed (in minutes)<br></li>
+				<li><a name="forceDrive">forceDrive</a><code>attr &lt;Rollo-Device&gt; forceDrive [0|1]</code>
 					<br />force open/closed even if device is already in target position<br></li>
-				<li><a name="rollo_noSetPosBlocked"><code>attr &lt;Rollo-Device&gt; noSetPosBlocked [0|1]</code></a>
+				<li><a name="noSetPosBlocked">noSetPosBlocked</a><code>attr &lt;Rollo-Device&gt; noSetPosBlocked [0|1]</code>
 					<br />if disabled positions may be set even if device is blocked. After unblocking it will drive to the position.<br></li>
 				<li><a href="#readingFnAttributes">readingFnAttributes</a></li>
 			</ul>
@@ -854,7 +862,7 @@ sub ROLLO_Attr(@) {
 <h3>ROLLO</h3>
 <ul>
 			<p>Das Modul ROLLO bietet eine einfache Moeglichkeit, mit ein bis zwei Relais den Hoch-/Runterlauf eines Rolladen zu steuern und punktgenau anzuhalten.<br>
-			Ausserdem wird die aktuelle pct in fhem abgebildet. Ueber welche Hardware/Module die Ausgaenge angesprochen werden ist dabei egal.<br /><h4>Example</h4>
+			Ausserdem wird die aktuelle Position in FHEM dargestellt. Ueber welche Hardware/Module die Ausgaenge angesprochen werden ist dabei egal.<br /><h4>Example</h4>
 			<p>
 				<code>define TestRollo ROLLO</code>
 				<br />
@@ -867,80 +875,83 @@ sub ROLLO_Attr(@) {
 			 <a name="ROLLO_Set"></a>
 	 <h4>Set</h4>
 			<ul>
-				<li><a name="rollo_open">
-						<code>set &lt;Rollo-Device&gt; open</code></a><br />
+				<li><a name="open">open</a>
+						<code>set &lt;Rollo-Device&gt; open</code><br />
 						Faehrt das Rollo komplett auf (pct 0) </li>
-				<li><a name="rollo_closed">
-						<code>set &lt;Rollo-Device&gt; closed</code></a><br />
+				<li><a name="closed">closed</a>
+						<code>set &lt;Rollo-Device&gt; closed</code><br />
 						Faehrt das Rollo komplett zu (pct 100) </li>
-				<li><a name="rollo_up">
-						<code>set &lt;Rollo-Device&gt; up</code></a><br />
+				<li><a name="up">up</a>
+						<code>set &lt;Rollo-Device&gt; up</code><br />
 						Faehrt das Rollo um 10 auf (pct +10) </li>
-				<li><a name="rollo_down">
-						<code>set &lt;Rollo-Device&gt; down</code></a><br />
+				<li><a name="down">down</a>
+						<code>set &lt;Rollo-Device&gt; down</code><br />
 						Faehrt das Rollo um 10 zu (pct -10) </li>
-				<li><a name="rollo_half">
-						<code>set &lt;Rollo-Device&gt; half</code></a><br />
+				<li><a name="half">half</a>
+						<code>set &lt;Rollo-Device&gt; half</code><br />
 						Faehrt das Rollo zur haelfte runter bzw. hoch (pct 50) </li>
-				<li><a name="rollo_stop">
-						<code>set &lt;Rollo-Device&gt; stop</code></a><br />
+				<li><a name="stop">stop</a>
+						<code>set &lt;Rollo-Device&gt; stop</code><br />
 						Stoppt das Rollo</li>
-				<li><a name="rollo_blocked">
+				<li><a name="drive">drive</a>
+						<code>set &lt;Rollo-Device&gt; drive up 5</code><br />
+						Fährt das Rollo in die angegebene Richtung für die angegebene Zeit (in Sekunden)</li>
+				<li><a name="blocked">blocked</a>
 						<code>set &lt;Rollo-Device&gt; blocked</code></a><br />
-						Erklaerung folgt</li>
-				<li><a name="rollo_unblocked">
-						<code>set &lt;Rollo-Device&gt; unblocked</code></a><br />
-						Erklaerung folgt</li>
-				<li><a name="rollo_pct">
-						<code>set &lt;Rollo-Device&gt; pct &lt;value&gt;</code></a><br />
+						wenn aktiviert, kann der ROLLO nur noch eingeschränkt gesteuert werden. Siehe Attribut block_mode für Details.</li>
+				<li><a name="unblocked">unblocked</a>
+						<code>set &lt;Rollo-Device&gt; unblocked</code><br />
+						Aktiviert einen geblockten ROLLO wieder für die normale Benutzung</li>
+				<li><a name="pct">pct</a>
+						<code>set &lt;Rollo-Device&gt; pct &lt;value&gt;</code><br />
 						Faehrt das Rollo auf eine beliebige pct zwischen 0 (offen) - 100 (geschlossen) </li>
-				<li><a name="rollo_reset">
-						<code>set &lt;Rollo-Device&gt; reset &lt;value&gt;</code></a><br />
+				<li><a name="reset">reset</a>
+						<code>set &lt;Rollo-Device&gt; reset &lt;value&gt;</code><br />
 						Sagt dem Modul in welcher pct sich der Rollo befindet</li>
-				<li><a name="rollo_extern">
+				<li><a name="extern">extern</a>
 						<code>set &lt;Rollo-Device&gt; extern &lt;value&gt;</code></a><br />
-						Der Software mitteilen das gerade Befehl X bereits ausgeführt wurde und nun z.B,. das berechnen der aktuellen pct gestartet werden soll</li>
+						Der Software mitteilen dass gerade Befehl X bereits ausgeführt wurde und nun z.B,. das berechnen der aktuellen pct gestartet werden soll</li>
 			</ul>
 			<a name="ROLLO_Get"></a>
 			<h4>Get</h4>
 			<ul>
-				<li><a name="rollo_version">
-						<code>get &lt;Rollo-Device&gt; version</code></a>
+				<li><a name="version">version</a>
+						<code>get &lt;Rollo-Device&gt; version</code>
 					<br />Gibt die version des Modul Rollos aus</li>
 			</ul>
 			<h4>Attributes</h4>
 			<ul>
-				<li><a name="rollo_type"><code>attr &lt;Rollo-Device&gt; type [normal|HomeKit]</code></a>
+				<li><a name="type">type</a><code>attr &lt;Rollo-Device&gt; type [normal|HomeKit]</code>
 					<br />Typunterscheidung zur unterstützung verschiedener Hardware. Abhängig vom gewählten Typ wird die Richtung von der die pct gerechnet wird festgelegt:<BR/>
 							normal = pct 0 ist offen, pct 100 ist geschlossen<BR/>
 							HomeKit = pct 100 ist offen, pct 0 ist geschlossen</li>
-				<li><a name="rollo_secondsDown"><code>attr &lt;Rollo-Device&gt; secondsDown	&lt;number&gt;</code></a>
+				<li><a name="secondsDown">secondsDown<code>attr &lt;Rollo-Device&gt; secondsDown	&lt;number&gt;</code>
 					<br />Sekunden zum hochfahren</li>
-				<li><a name="rollo_secondsUp"><code>attr &lt;Rollo-Device&gt; secondsUp	&lt;number&gt;</code></a>
+				<li><a name="secondsUp">secondsUp</a><code>attr &lt;Rollo-Device&gt; secondsUp	&lt;number&gt;</code>
 					<br />Sekunden zum herunterfahren</li>
-				<li><a name="rollo_excessTop"><code>attr &lt;Rollo-Device&gt; excessTop	&lt;number&gt;</code></a>
+				<li><a name="excessTop">excessTop</a><code>attr &lt;Rollo-Device&gt; excessTop	&lt;number&gt;</code>
 					<br />Zeit die mein Rollo Fahren muss ohne das sich die Rollo-pct ändert (bei mir fährt der Rollo noch in die Wand, ohne das man es am Fenster sieht, die pct ist also schon bei 0%)</li>
-				<li><a name="rollo_excessBottom"><code>attr &lt;Rollo-Device&gt; excessBottom &lt;number&gt;</code></a>
+				<li><a name="excessBottom">excessBottom</a><code>attr &lt;Rollo-Device&gt; excessBottom &lt;number&gt;</code>
 					<br />(siehe excessTop)</li>
-				<li><a name="rollo_switchTime"><code>attr &lt;Rollo-Device&gt; switchTime &lt;number&gt;</code></a>
+				<li><a name="switchTime">switchTime</a><code>attr &lt;Rollo-Device&gt; switchTime &lt;number&gt;</code>
 					<br />Zeit die zwischen 2 gegensätzlichen Laufbefehlen pausiert werden soll, also wenn der Rollo z.B. gerade runter fährt und ich den Befehl gebe hoch zu fahren, dann soll 1 sekunde gewartet werden bis der Motor wirklich zum stillstand kommt, bevor es wieder in die andere Richtung weiter geht. Dies ist die einzige Zeit die nichts mit der eigentlichen Laufzeit des Motors zu tun hat, sondern ein timer zwischen den Laufzeiten.</li>
-				<li><a name="rollo_resetTime"><code>attr &lt;Rollo-Device&gt; resetTime	&lt;number&gt;</code></a>
+				<li><a name="resetTime">resetTime</a><code>attr &lt;Rollo-Device&gt; resetTime	&lt;number&gt;</code>
 					<br />Zeit die beim Anfahren von Endpcten (offen,geschlossen) der Motor zusätzlich an bleiben soll um sicherzustellen das die Endpct wirklich angefahren wurde. Dadurch können Differenzen in der pctsberechnung korrigiert werden.</li>
-				<li><a name="rollo_reactionTime"><code>attr &lt;Rollo-Device&gt; reactionTime &lt;number&gt;</code></a>
+				<li><a name="reactionTime">reactionTime</a><code>attr &lt;Rollo-Device&gt; reactionTime &lt;number&gt;</code>
 					<br />Zeit für den Motor zum reagieren</li>
-				<li><a name="rollo_autoStop"><code>attr &lt;Rollo-Device&gt; autoStop [0|1]</code></a>
+				<li><a name="autoStop">autoStop</a><code>attr &lt;Rollo-Device&gt; autoStop [0|1]</code>
 					<br />Es muss kein Stop-Befehl ausgeführt werden, das Rollo stoppt von selbst.</li>
-				<li><a name="rollo_commandUp"><code>attr &lt;Rollo-Device&gt; commandUp	&lt;string&gt;</code></a>
+				<li><a name="commandUp">commandUp</a><code>attr &lt;Rollo-Device&gt; commandUp	&lt;string&gt;</code>
 					<br />Es werden bis zu 3 beliebige Befehle zum hochfahren ausgeführt</li>
-				<li><a name="rollo_commandDown"><code>attr &lt;Rollo-Device&gt; commandDown	&lt;string&gt;</code></a>
+				<li><a name="commandDown">commandDown</a><code>attr &lt;Rollo-Device&gt; commandDown	&lt;string&gt;</code>
 					<br />Es werden bis zu 3 beliebige Befehle zum runterfahren ausgeführt</li>
-				<li><a name="rollo_commandStop"><code>attr &lt;Rollo-Device&gt; commandStop	&lt;string&gt;</code></a>
+				<li><a name="commandStop">commandStop</a><code>attr &lt;Rollo-Device&gt; commandStop	&lt;string&gt;</code>
 					<br />Befehl der zum Stoppen ausgeführt wird, sofern nicht commandStopDown bzw. commandStopUp definiert sind</li>
-				<li><a name="rollo_commandStopDown"><code>attr &lt;Rollo-Device&gt; commandStopDown	&lt;string&gt;</code></a>
+				<li><a name="commandStopDown">commandStopDown</a><code>attr &lt;Rollo-Device&gt; commandStopDown	&lt;string&gt;</code>
 					<br />Befehl der zum stoppen ausgeführt wird, wenn der Rollo gerade herunterfährt. Wenn nicht definiert wird commandStop ausgeführt</li>
-				<li><a name="rollo_commandStopUp"><code>attr &lt;Rollo-Device&gt; commandStopUp	&lt;string&gt;</code></a>
+				<li><a name="commandStopUp">commandStopUp</a><code>attr &lt;Rollo-Device&gt; commandStopUp	&lt;string&gt;</code>
 					<br />Befehl der zum Stoppen ausgeführt wird,wenn der Rollo gerade hochfährt. Wenn nicht definiert wird commandStop ausgeführt</li>
-				<li><a name="rollo_blockMode"><code>attr &lt;Rollo-Device&gt; blockMode [blocked|force-open|force-closed|only-up|only-down|half-up|half-down|none]</code></a>
+				<li><a name="blockMode">blockMode</a><code>attr &lt;Rollo-Device&gt; blockMode [blocked|force-open|force-closed|only-up|only-down|half-up|half-down|none]</code>
 					<br />wenn ich den Befehl blocked ausführe, dann wird aufgrund der blockMode-Art festgelegt wie mein Rollo reagieren soll:<br>
 							blocked = Rollo lässt sich nicht mehr bewegen<br>
 							force-open = bei einem beliebigen Fahrbefehl wird Rollo hochgefahren<br>
@@ -950,12 +961,17 @@ sub ROLLO_Attr(@) {
 							half-up = es werden nur die pcten 50-100 angefahren, bei pct <50 wird pct 50% angefahren,<br>
 							half-down = es werden nur die pcten 0-50 angefahren, bei pct >50 wird pct 50 angefahren<br>
 							none = block-Modus ist deaktiviert</li>
-				<li><a name="rollo_automatic-enabled"><code>attr &lt;Rollo-Device&gt; automatic-enabled	[on|off]</code></a>
+				<li><a name="automatic-enabled">automatic-enabled</a><code>attr &lt;Rollo-Device&gt; automatic-enabled	[on|off]</code>
 					<br />Wenn auf off gestellt, haben Befehle über Modul ROLLO_Automatic keine Auswirkungen auf diesen Rollo</li>
-				<li><a name="rollo_automatic-delay"><code>attr &lt;Rollo-Device&gt; automatic-delay	&lt;number&gt;</code></a>
+				<li><a name="automatic-delay">automatic-delay</a><code>attr &lt;Rollo-Device&gt; automatic-delay	&lt;number&gt;</code>
 					<br />Dieses Attribut wird nur fuer die Modulerweiterung ROLLADEN_Automatic benoetigt.<br>
 					Hiermit kann einge Zeitverzoegerund fuer den Rolladen eingestellt werden, werden die Rolladen per Automatic heruntergefahren, so wird dieser um die angegebenen minuten spaeter heruntergefahren.
 					</li>
+				<li><a name="forceDrive">forceDrive</a><code>attr &lt;Rollo-Device&gt; forceDrive [0|1]</code>
+					<br />open/closed wird ausgeführt, auch wenn das ROLLO bereits in der Zielposition ist<br></li>
+				<li><a name="noSetPosBlocked">noSetPosBlocked</a><code>attr &lt;Rollo-Device&gt; noSetPosBlocked [0|1]</code>
+					<br />Wenn deaktiviert, können Positionsn (pct) auch gesetzt werden, wenn der ROLLO geblockt ist. Nach dem unblocken wird die entsprechende Position angefahren.<br></li>
+
 				<li><a href="#readingFnAttributes">readingFnAttributes</a></li>
 			</ul>
 </ul>
