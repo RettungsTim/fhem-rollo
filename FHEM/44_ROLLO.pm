@@ -139,11 +139,12 @@ sub ROLLO_Set($@) {
     }
     my $cmd = $a[1];
 
+	# Keep command "position" for a while
     if ($cmd eq "position" ) {
         $cmd = "pct";
         Log3 $name, 1, "ROLLO ($name) Set command \"position\" is deprecated. Please change your definitions to \"pct\"";
     }
-
+	
     my $arg = "";
     $arg = $a[2] if defined $a[2];
     my $arg2 = "";
@@ -203,10 +204,14 @@ sub ROLLO_Set($@) {
         return;
     }
     if ( $cmd eq "drive" ) {
+		return "Drive needs two arguments, the direction and the time in seconds" if (!$arg2);
         my $direction = $arg;
         $arg = undef;
         my $time = $arg2;
-		return "Drive needs two arguments, the direction and the time in seconds" if (!$arg2);
+		$hash->{driveTime} = $time;
+		$hash->{driveDir} = $direction;
+		my $dpct = ROLLO_calculateDesiredPosition($hash,$name);
+		readingsSingleUpdate($hash,"desired_pct",$dpct,1);
         Log3 $name, 3, "DRIVE Command drive $direction for $time seconds. ";
         ROLLO_Stop($hash);
         ROLLO_Drive( $hash, $time, $direction, $cmd );
@@ -218,13 +223,13 @@ sub ROLLO_Set($@) {
     my $typ = AttrVal( $name, "type", "normal" );
 
     # Allow all positions
-    if ( grep /^$arg$/, @pctsets )
+    #if ( grep /^$arg$/, @pctsets )
 
       #change sequence to avoid "is not numeric" warning
-      #if ($arg && $arg =~ /^[0-9,.E]*$/ && $arg >= 0 && $arg <= 100 )
+    if ($arg && $arg =~ /^[0-9,.E]*$/ && $arg >= 0 && $arg <= 100 )
       #if ($arg >= 0 && $arg <= 100 )
     {
-        Log3 $name, 3, "We have an Arg $arg,$cmd";
+        Log3 $name, 5, "We have an Arg $arg,$cmd";
         if ( $cmd eq "pct" ) {
             if ( $typ eq "HomeKit" ) {
                 Log3 $name, 4, "invert pct from $arg to (100-$arg)";
@@ -234,7 +239,7 @@ sub ROLLO_Set($@) {
             $desiredPos = $arg;
             Log3 $name, 3, "DesiredPos now $desiredPos, $arg";
         }
-        else {
+        else { #I think this shouldn't happen... 
             if ( $typ eq "HomeKit" ) {
                 $cmd = 100 - $cmd;
             }
@@ -256,8 +261,12 @@ sub ROLLO_Set($@) {
         else {
             $desiredPos = $pcts{$cmd};
         }
-
-        $desiredPos = "none" if !$desiredPos || $desiredPos eq "";
+		
+		# Ich verstehe nicht wann nachfolgender Zustand eintreten kann, das Coding führt aber dazu, dass pct 0 (open) auf "none" gesetzt wird 
+        #$desiredPos = "none" if !$desiredPos || $desiredPos eq "";  
+		
+		
+			
         Log3 $name, 4, "ROLLO ($name) set desired pct $desiredPos";
     }
 
@@ -268,7 +277,7 @@ sub ROLLO_Set($@) {
     # bevor ich die desired-position überschreibe!
 
     if ( ( ReadingsVal( $name, "state", "" ) =~ /drive-/ ) ) {
-        my $pct = ROLLO_calculatePosition( $hash, $name );
+        my $pct = ROLLO_calculatepct( $hash, $name );
         readingsSingleUpdate( $hash, "pct", $pct, 1 );
 
         # Desired-position sollte auf aktuelle position gesetzt werden, wenn explizit gestoppt wird.
@@ -403,7 +412,7 @@ sub ROLLO_Start($) {
 
     my $direction = "down";
     $direction = "up" if ( $pct > $desired_pct || $desired_pct == 0 );
-    if ( $hash->{driveDir} ) { $direction = $hash->{driveDir} }
+    #if ( $hash->{driveDir} ) { $direction = $hash->{driveDir} }
     Log3 $name, 4, "ROLLO ($name) pct: $pct -> $desired_pct / direction: $direction";
 
     #Ich fahre ja gerade...wo bin ich aktuell?
