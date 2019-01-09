@@ -83,6 +83,7 @@ sub ROLLO_Initialize($) {
       . " automatic-delay"
       . " autoStop:1,0"
       . " type:normal,HomeKit"
+	  . " disable:0,1"
       . " forceDrive:0,1"
       . " noSetPosBlocked:0,1" . " "
       . $readingFnAttributes;
@@ -112,6 +113,12 @@ sub ROLLO_Define($$) {
     $attr{$name}{"type"} = "normal"; #neue Attribute sollten als default keine Änderung an der Funktionsweise bewirken.
 
     #	$attr{$name}{"blockMode"} = "none";
+	
+	if (IsDisabled($name) ) {
+        $hash->{STATE} = "inactive";
+        $hash->{helper}{DISABLED} = 1;
+    }
+	
     return undef;
 }
 
@@ -127,6 +134,9 @@ sub ROLLO_Undef($) {
 sub ROLLO_Set($@) {
     my ( $hash, @a ) = @_;
     my $name = $hash->{NAME};
+	
+	return undef if IsDisabled($name);
+	
     $attr{$name}{"webCmd"} = "open:closed:half:stop:pct";
 	if (ReadingsVal($name,"position","exists") ne "exists") {
 		#Log3 $name,1, "ROLLO ($name) Readings position and desired_position aren't used anymore. Execute \"deletereading $name position\" and \"deletereading $name desired_position\" to remove them";
@@ -235,10 +245,10 @@ sub ROLLO_Set($@) {
 
     # Allow all positions
     #if ( grep /^$arg$/, @pctsets )
-
+	#Log3 $name, 5, "ROLLO ($name) Arg is $arg";
       #change sequence to avoid "is not numeric" warning
-    if ($arg && $arg =~ /^[0-9,.E]*$/ && $arg >= 0 && $arg <= 100 )
-      #if ($arg >= 0 && $arg <= 100 )
+    #if ($arg && $arg =~ /^[0-9,.E]*$/ && $arg >= 0 && $arg <= 100 )
+    if ($arg >= 0 && $arg <= 100 )
     {
         if ( $cmd eq "pct" ) {
             if ( $typ eq "HomeKit" ) {
@@ -709,7 +719,8 @@ sub ROLLO_Get($@) {
 sub ROLLO_Attr(@) {
     my ( $cmd, $name, $aName, $aVal ) = @_;
     Log3 $name, 5, "ROLLO ($name) >> Attr";
-
+	my $hash = $defs{$name};
+	
     if ( $cmd eq "set" ) {
         if ( $aName eq "Regex" ) {
             eval { qr/$aVal/ };
@@ -733,6 +744,18 @@ sub ROLLO_Attr(@) {
               if ( ( $aVal eq "HomeKit" ) && ( ( $iconAktuell eq $iconNormal ) || ( $iconAktuell eq "kein" ) ) );
             fhem("attr $name devStateIcon $iconNormal")
               if ( ( $aVal eq "normal" ) && ( ( $iconAktuell eq $iconHomeKit ) || ( $iconAktuell eq "kein" ) ) );
+        }
+		 elsif ( $aName eq "disable" ) {
+            if ( $aVal == 1 ) {
+                RemoveInternalTimer($hash);
+                readingsSingleUpdate( $hash, "state", "inactive", 1 );
+                $hash->{helper}{DISABLED} = 1;
+            }
+            elsif ( $aVal == 0 ) {
+				readingsSingleUpdate( $hash, "state", "Initialized", 1 );
+				$hash->{helper}{DISABLED} = 1;
+            }
+
         }
     }
     return undef;
