@@ -782,11 +782,17 @@ sub ROLLO_Attr(@) {
             }
             elsif ( $aVal == 0 ) {
                 readingsSingleUpdate( $hash, "state", "Initialized", 1 );
-                $hash->{helper}{DISABLED} = 1;
+                $hash->{helper}{DISABLED} = 0;
             }
 
         }
     }
+	elsif ( $cmd eq "del" ) {
+		if ( $aName eq "disable" ) {
+            readingsSingleUpdate( $hash, "state", "Initialized", 1 );
+            $hash->{helper}{DISABLED} = 0;
+		}
+	}
     return undef;
 }
 
