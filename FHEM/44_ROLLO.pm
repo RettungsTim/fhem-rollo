@@ -134,7 +134,7 @@ sub ROLLO_Define($$) {
     $attr{$name}{"rl_switchTime"}   = 1;
     $attr{$name}{"rl_resetTime"}    = 0;
     $attr{$name}{"rl_autoStop"} = 0;    #neue Attribute sollten als default keine Änderung an der Funktionsweise bewirken.
-    $attr{$name}{"rl_devStateIcon"} =
+    $attr{$name}{"devStateIcon"} =
 'open:fts_shutter_10:closed closed:fts_shutter_100:open half:fts_shutter_50:closed drive-up:fts_shutter_up@red:stop drive-down:fts_shutter_down@red:stop pct-100:fts_shutter_100:open pct-90:fts_shutter_80:closed pct-80:fts_shutter_80:closed pct-70:fts_shutter_70:closed pct-60:fts_shutter_60:closed pct-50:fts_shutter_50:closed pct-40:fts_shutter_40:open pct-30:fts_shutter_30:open pct-20:fts_shutter_20:open pct-10:fts_shutter_10:open pct-0:fts_shutter_10:closed';
     $attr{$name}{"rl_type"} = "normal"; #neue Attribute sollten als default keine Änderung an der Funktionsweise bewirken.
 
