@@ -127,21 +127,47 @@ sub ROLLO_Define($$) {
 
     my @a = split( "[ \t][ \t]*", $def );
 
-    $attr{$name}{"rl_secondsDown"}  = 30;
-    $attr{$name}{"rl_secondsUp"}    = 30;
-    $attr{$name}{"rl_excessTop"}    = 4;
-    $attr{$name}{"rl_excessBottom"} = 2;
-    $attr{$name}{"rl_switchTime"}   = 1;
-    $attr{$name}{"rl_resetTime"}    = 0;
-    $attr{$name}{"rl_autoStop"} = 0;    #neue Attribute sollten als default keine Änderung an der Funktionsweise bewirken.
-    $attr{$name}{"devStateIcon"} =
-'open:fts_shutter_10:closed closed:fts_shutter_100:open half:fts_shutter_50:closed drive-up:fts_shutter_up@red:stop drive-down:fts_shutter_down@red:stop pct-100:fts_shutter_100:open pct-90:fts_shutter_80:closed pct-80:fts_shutter_80:closed pct-70:fts_shutter_70:closed pct-60:fts_shutter_60:closed pct-50:fts_shutter_50:closed pct-40:fts_shutter_40:open pct-30:fts_shutter_30:open pct-20:fts_shutter_20:open pct-10:fts_shutter_10:open pct-0:fts_shutter_10:closed';
-    $attr{$name}{"rl_type"} = "normal"; #neue Attribute sollten als default keine Änderung an der Funktionsweise bewirken.
-
+	# no direct access to %attr - KernSani 13.01.2019
+	CommandAttr( undef, $name . " rl_secondsDown 30" )
+      if ( AttrVal( $name, "rl_secondsDown", "" ) eq "" );
+    #$attr{$name}{"rl_secondsDown"}  = 30;
+    CommandAttr( undef, $name . " rl_secondsUp 30" )
+      if ( AttrVal( $name, "rl_secondsUp", "" ) eq "" );
+	#$attr{$name}{"rl_secondsUp"}    = 30;
+    CommandAttr( undef, $name . " rl_excessTop 4" )
+      if ( AttrVal( $name, "rl_excessTop", "" ) eq "" );
+	#$attr{$name}{"rl_excessTop"}    = 4;
+    CommandAttr( undef, $name . " rl_excessBottom 2" )
+      if ( AttrVal( $name, "rl_excessBottom", "" ) eq "" );
+	#$attr{$name}{"rl_excessBottom"} = 2;
+    CommandAttr( undef, $name . " rl_switchTime 1" )
+      if ( AttrVal( $name, "rl_switchTime", "" ) eq "" );
+	#$attr{$name}{"rl_switchTime"}   = 1;
+    CommandAttr( undef, $name . " rl_resetTime 0" )
+      if ( AttrVal( $name, "rl_switchTime", "" ) eq "" );
+	#$attr{$name}{"rl_resetTime"}    = 0;
+    CommandAttr( undef, $name . " rl_autoStop 0" )
+      if ( AttrVal( $name, "rl_autoStop", "" ) eq "" );
+	#fix devstateicon - KernSani 13.01.2019
+	my $devStateIcon ='open:fts_shutter_10:closed closed:fts_shutter_100:open half:fts_shutter_50:closed drive-up:fts_shutter_up@red:stop drive-down:fts_shutter_down@red:stop pct-100:fts_shutter_100:open pct-90:fts_shutter_80:closed pct-80:fts_shutter_80:closed pct-70:fts_shutter_70:closed pct-60:fts_shutter_60:closed pct-50:fts_shutter_50:closed pct-40:fts_shutter_40:open pct-30:fts_shutter_30:open pct-20:fts_shutter_20:open pct-10:fts_shutter_10:open pct-0:fts_shutter_10:closed';
+    CommandAttr( undef, $name . " devStateIcon $devStateIcon" )
+      if ( AttrVal( $name, "devStateIcon", "" ) eq "" );
+    CommandAttr( undef, $name . " rl_type normal" )
+      if ( AttrVal( $name, "rl_type", "" ) eq "" );
+    #$attr{$name}{"rl_type"} = "normal"; #neue Attribute sollten als default keine Änderung an der Funktionsweise bewirken.
+	CommandAttr( undef, $name . " webCmd open:closed:half:stop:pct" )
+      if ( AttrVal( $name, "webCmd", "" ) eq "" );
+	#cmdIcon aded - KernSani 13.01.2019
+	CommandAttr( undef, $name . " cmdIcon open:fts_shutter_up closed:fts_shutter_down stop:fts_shutter_manual half:fts_shutter_50" )
+      if ( AttrVal( $name, "cmdIcon", "" ) eq "" );  
+	
+    
+	#$attr{$name}{"webCmd"} = "open:closed:half:stop:pct";
+	
     #	$attr{$name}{"blockMode"} = "none";
 
     if ( IsDisabled($name) ) {
-        $hash->{STATE} = "inactive";
+		readingsSingleUpdate( $hash, "state", "inactive", 1 );
         $hash->{helper}{DISABLED} = 1;
     }
 
@@ -161,8 +187,9 @@ sub ROLLO_Set($@) {
     my ( $hash, @a ) = @_;
     my $name = $hash->{NAME};
     return undef if IsDisabled($name);
-
-    $attr{$name}{"webCmd"} = "open:closed:half:stop:pct";
+	
+	#Warum steht das hier? Verschoben in Define - KernSani 13.01.2019 
+    #$attr{$name}{"webCmd"} = "open:closed:half:stop:pct";
     if ( ReadingsVal( $name, "position", "exists" ) ne "exists" ) {
 
 #Log3 $name,1, "ROLLO ($name) Readings position and desired_position aren't used anymore. Execute \"deletereading $name position\" and \"deletereading $name desired_position\" to remove them";
@@ -243,7 +270,8 @@ sub ROLLO_Set($@) {
 
         #avoid the deletereading mesage in Log  - KernSani 30.12.2018
         #fhem("deletereading $name blocked");
-        readingsDelete( $hash, "blocked" );
+        #readingsDelete( $hash, "blocked" );
+		CommandDeleteReading(undef, "$name blocked");
         return;
     }
 
@@ -385,9 +413,11 @@ sub ROLLO_Drive {
     if ( ReadingsVal( $name, "drive-type", "undef" ) ne "extern" ) {
         Log3 $name, 4, "ROLLO ($name) execute following commands: $command1; $command2; $command3";
         readingsSingleUpdate( $hash, "drive-type", "modul", 1 );
-        fhem("$command1") if ( $command1 ne "" );
-        fhem("$command2") if ( $command2 ne "" );
-        fhem("$command3") if ( $command3 ne "" );
+		#no fhem() - KernSani 13.01.2019
+        my $ret = AnalyzeCommandChain(undef,"$command1") if ( $command1 ne "" );
+		Log3 $name, 1, "ROLLO ($name) $ret" if (defined($ret));
+        AnalyzeCommandChain(undef,"$command2") if ( $command2 ne "" );
+        AnalyzeCommandChain(undef,"$command3") if ( $command3 ne "" );
     }
     else {
         #readingsSingleUpdate($hash,"drive-type","extern",1);
@@ -530,13 +560,13 @@ sub ROLLO_Stop($) {
     #wenn autostop=1 und pct <> 0+100 und rollo fährt, dann kein stopbefehl ausführen...
     if ( ( $state =~ /drive-/ && $pct >= 0 && $pct <= 100 ) || AttrVal( $name, "rl_autoStop", 0 ) ne 1 ) {
         my $command = AttrVal( $name, 'rl_commandStop', "" );
-        $command = AttrVal( $name, 'rl_commandStopUp', "" ) if ( defined( $attr{$name}{rl_commandStopUp} ) );
+        $command = AttrVal( $name, 'rl_commandStopUp', "" ) if ( AttrVal( $name, 'rl_commandStopUp', "" ) ne "");
         $command = AttrVal( $name, 'rl_commandStopDown', "" )
-          if ( defined( $attr{$name}{rl_commandStopDown} ) && $state eq "drive-down" );
+          if ( AttrVal( $name, 'rl_commandStopDown', "" )ne "" && $state eq "drive-down" );
 
         # NUR WENN NICHT BEREITS EXTERN GESTOPPT
         if ( ReadingsVal( $name, "drive-type", "undef" ) ne "extern" ) {
-            fhem("$command") if ( $command ne "" );
+            AnalyzeCommandChain(undef,"$command") if ( $command ne "" );
             Log3 $name, 4, "ROLLO ($name) stopped by excuting the command: $command";
         }
         else {
@@ -769,9 +799,9 @@ sub ROLLO_Attr(@) {
 'open:fts_shutter_10:closed closed:fts_shutter_100:open half:fts_shutter_50:closed drive-up:fts_shutter_up@red:stop drive-down:fts_shutter_down@red:stop pct-100:fts_shutter_10:open pct-90:fts_shutter_10:closed pct-80:fts_shutter_20:closed pct-70:fts_shutter_30:closed pct-60:fts_shutter_40:closed pct-50:fts_shutter_50:closed pct-40:fts_shutter_60:open pct-30:fts_shutter_70:open pct-20:fts_shutter_80:open pct-10:fts_shutter_90:open pct-0:fts_shutter_100:closed';
             my $iconAktuell = AttrVal( $name, "devStateIcon", "kein" );
 
-            fhem("attr $name devStateIcon $iconHomeKit")
+            CommandAttr(undef, " $name devStateIcon $iconHomeKit")
               if ( ( $aVal eq "HomeKit" ) && ( ( $iconAktuell eq $iconNormal ) || ( $iconAktuell eq "kein" ) ) );
-            fhem("attr $name devStateIcon $iconNormal")
+            CommandAttr(undef, " $name devStateIcon $iconNormal")
               if ( ( $aVal eq "normal" ) && ( ( $iconAktuell eq $iconHomeKit ) || ( $iconAktuell eq "kein" ) ) );
         }
         elsif ( $aName eq "disable" ) {
