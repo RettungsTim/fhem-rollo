@@ -1,5 +1,7 @@
 FHEM ROLLO last change:
 2018-01-13
+- minor bugfixes
+2018-01-13
 - Made ROLLO compliant to FHEM coding guidelines
 - Renamed attributes
 - added disable
