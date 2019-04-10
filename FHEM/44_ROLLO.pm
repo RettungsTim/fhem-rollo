@@ -1,5 +1,5 @@
 ########################################################################################
-# $Id: 44_ROLLO.pm 1202 2018-07-23 08:38:00Z                                         $ #
+# $Id: 44_ROLLO.pm 18352 2019-01-20 15:24:51Z KernSani $ #
 # Modul zur einfacheren Rolladensteuerung   										   #
 #  																					   #
 # Thomas Ramm, 2016                                                                    #
@@ -25,13 +25,17 @@
 #  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 #  GNU General Public License for more details.
 #
+#  CHANGELOG:
+#		1.404:		Hint in Commandref regarding position->pct
+# 		1.403: 		Loglevel from 3 to 5 for few messages
+#					Rollo should only drive 10 steps in "force" mode for up/down
 ########################################################################################
 package main;
 
 use strict;
 use warnings;
 
-my $version = "1.401";
+my $version = "1.403";
 
 my %sets = (
     "open"      => "noArg",
@@ -126,21 +130,57 @@ sub ROLLO_Define($$) {
 
     my @a = split( "[ \t][ \t]*", $def );
 
-    $attr{$name}{"rl_secondsDown"}  = 30;
-    $attr{$name}{"rl_secondsUp"}    = 30;
-    $attr{$name}{"rl_excessTop"}    = 4;
-    $attr{$name}{"rl_excessBottom"} = 2;
-    $attr{$name}{"rl_switchTime"}   = 1;
-    $attr{$name}{"rl_resetTime"}    = 0;
-    $attr{$name}{"rl_autoStop"} = 0;    #neue Attribute sollten als default keine Änderung an der Funktionsweise bewirken.
-    $attr{$name}{"rl_devStateIcon"} =
+    # no direct access to %attr - KernSani 13.01.2019
+    CommandAttr( undef, $name . " rl_secondsDown 30" )
+      if ( AttrVal( $name, "rl_secondsDown", "" ) eq "" );
+
+    #$attr{$name}{"rl_secondsDown"}  = 30;
+    CommandAttr( undef, $name . " rl_secondsUp 30" )
+      if ( AttrVal( $name, "rl_secondsUp", "" ) eq "" );
+
+    #$attr{$name}{"rl_secondsUp"}    = 30;
+    CommandAttr( undef, $name . " rl_excessTop 4" )
+      if ( AttrVal( $name, "rl_excessTop", "" ) eq "" );
+
+    #$attr{$name}{"rl_excessTop"}    = 4;
+    CommandAttr( undef, $name . " rl_excessBottom 2" )
+      if ( AttrVal( $name, "rl_excessBottom", "" ) eq "" );
+
+    #$attr{$name}{"rl_excessBottom"} = 2;
+    CommandAttr( undef, $name . " rl_switchTime 1" )
+      if ( AttrVal( $name, "rl_switchTime", "" ) eq "" );
+
+    #$attr{$name}{"rl_switchTime"}   = 1;
+    CommandAttr( undef, $name . " rl_resetTime 0" )
+      if ( AttrVal( $name, "rl_switchTime", "" ) eq "" );
+
+    #$attr{$name}{"rl_resetTime"}    = 0;
+    CommandAttr( undef, $name . " rl_autoStop 0" )
+      if ( AttrVal( $name, "rl_autoStop", "" ) eq "" );
+
+    #fix devstateicon - KernSani 13.01.2019
+    my $devStateIcon =
 'open:fts_shutter_10:closed closed:fts_shutter_100:open half:fts_shutter_50:closed drive-up:fts_shutter_up@red:stop drive-down:fts_shutter_down@red:stop pct-100:fts_shutter_100:open pct-90:fts_shutter_80:closed pct-80:fts_shutter_80:closed pct-70:fts_shutter_70:closed pct-60:fts_shutter_60:closed pct-50:fts_shutter_50:closed pct-40:fts_shutter_40:open pct-30:fts_shutter_30:open pct-20:fts_shutter_20:open pct-10:fts_shutter_10:open pct-0:fts_shutter_10:closed';
-    $attr{$name}{"rl_type"} = "normal"; #neue Attribute sollten als default keine Änderung an der Funktionsweise bewirken.
+    CommandAttr( undef, $name . " devStateIcon $devStateIcon" )
+      if ( AttrVal( $name, "devStateIcon", "" ) eq "" );
+    CommandAttr( undef, $name . " rl_type normal" )
+      if ( AttrVal( $name, "rl_type", "" ) eq "" );
+
+#$attr{$name}{"rl_type"} = "normal"; #neue Attribute sollten als default keine Änderung an der Funktionsweise bewirken.
+    CommandAttr( undef, $name . " webCmd open:closed:half:stop:pct" )
+      if ( AttrVal( $name, "webCmd", "" ) eq "" );
+
+    #cmdIcon aded - KernSani 13.01.2019
+    CommandAttr( undef,
+        $name . " cmdIcon open:fts_shutter_up closed:fts_shutter_down stop:fts_shutter_manual half:fts_shutter_50" )
+      if ( AttrVal( $name, "cmdIcon", "" ) eq "" );
+
+    #$attr{$name}{"webCmd"} = "open:closed:half:stop:pct";
 
     #	$attr{$name}{"blockMode"} = "none";
 
     if ( IsDisabled($name) ) {
-        $hash->{STATE} = "inactive";
+        readingsSingleUpdate( $hash, "state", "inactive", 1 );
         $hash->{helper}{DISABLED} = 1;
     }
 
@@ -159,10 +199,10 @@ sub ROLLO_Undef($) {
 sub ROLLO_Set($@) {
     my ( $hash, @a ) = @_;
     my $name = $hash->{NAME};
-
     return undef if IsDisabled($name);
 
-    $attr{$name}{"webCmd"} = "open:closed:half:stop:pct";
+    #Warum steht das hier? Verschoben in Define - KernSani 13.01.2019
+    #$attr{$name}{"webCmd"} = "open:closed:half:stop:pct";
     if ( ReadingsVal( $name, "position", "exists" ) ne "exists" ) {
 
 #Log3 $name,1, "ROLLO ($name) Readings position and desired_position aren't used anymore. Execute \"deletereading $name position\" and \"deletereading $name desired_position\" to remove them";
@@ -181,7 +221,7 @@ sub ROLLO_Set($@) {
         Log3 $name, 1,
           "ROLLO ($name) Set command \"position\" is deprecated. Please change your definitions to \"pct\"";
     }
-
+    my $desiredPos;
     my $arg = "";
     $arg = $a[2] if defined $a[2];
     my $arg2 = "";
@@ -213,6 +253,7 @@ sub ROLLO_Set($@) {
     if ( $cmd eq "extern" ) {
         readingsSingleUpdate( $hash, "drive-type", "extern", 1 );
         $cmd = $arg;
+        $arg = "";
     }
     elsif ( $cmd eq "reset" ) {
         my $reset_pct = $pcts{$arg};
@@ -243,7 +284,8 @@ sub ROLLO_Set($@) {
 
         #avoid the deletereading mesage in Log  - KernSani 30.12.2018
         #fhem("deletereading $name blocked");
-        readingsDelete( $hash, "blocked" );
+        #readingsDelete( $hash, "blocked" );
+        CommandDeleteReading( undef, "$name blocked" );
         return;
     }
 
@@ -265,7 +307,7 @@ sub ROLLO_Set($@) {
 
     ##### now do the real drive stuff
 
-    my $desiredPos = $cmd;
+    $desiredPos = $cmd;
     Log3 $name, 5, "ROLLO ($name) DesiredPos set to $desiredPos, ($arg) ";
     my $typ = AttrVal( $name, "rl_type", "normal" );
 
@@ -311,6 +353,10 @@ sub ROLLO_Set($@) {
 # Ich verstehe nicht wann nachfolgender Zustand eintreten kann, das Coding führt aber dazu, dass pct 0 (open) auf "none" gesetzt wird
 #$desiredPos = "none" if !$desiredPos || $desiredPos eq "";
     }
+
+    #set desiredPos to avoid "uninitialized" message later (happens with "blocked" - KernSani 14.01.2019
+    $desiredPos = ReadingsNum( $name, "desired_pct", 0 ) unless defined($desiredPos);
+
     Log3 $name, 5, "ROLLO ($name) DesiredPos now $desiredPos, $cmd";
 
     #wenn ich gerade am fahren bin und eine neue Zielposition angefahren werden soll,
@@ -349,7 +395,7 @@ sub ROLLO_isAllowed($$$) {
     my $pct = ReadingsVal( $name, "pct", undef );
     $pct = 100 - $pct if ( AttrVal( $name, "rl_type", "normal" ) eq "HomeKit" );    # KernSani 30.12.2018
     my $blockmode = AttrVal( $name, "rl_blockMode", "none" );
-    Log3 $name, 3, "ROLLO ($name) >> Blockmode:$blockmode $pct-->$desired_pct";
+    Log3 $name, 5, "ROLLO ($name) >> Blockmode:$blockmode $pct-->$desired_pct";
     if (   $blockmode eq "blocked"
         || ( $blockmode eq "only-up"   && $pct <= $desired_pct )
         || ( $blockmode eq "only-down" && $pct >= $desired_pct ) )
@@ -385,9 +431,12 @@ sub ROLLO_Drive {
     if ( ReadingsVal( $name, "drive-type", "undef" ) ne "extern" ) {
         Log3 $name, 4, "ROLLO ($name) execute following commands: $command1; $command2; $command3";
         readingsSingleUpdate( $hash, "drive-type", "modul", 1 );
-        fhem("$command1") if ( $command1 ne "" );
-        fhem("$command2") if ( $command2 ne "" );
-        fhem("$command3") if ( $command3 ne "" );
+
+        #no fhem() - KernSani 13.01.2019
+        my $ret = AnalyzeCommandChain( undef, "$command1" ) if ( $command1 ne "" );
+        Log3 $name, 1, "ROLLO ($name) $ret" if ( defined($ret) );
+        AnalyzeCommandChain( undef, "$command2" ) if ( $command2 ne "" );
+        AnalyzeCommandChain( undef, "$command3" ) if ( $command3 ne "" );
     }
     else {
         #readingsSingleUpdate($hash,"drive-type","extern",1);
@@ -528,15 +577,15 @@ sub ROLLO_Stop($) {
     Log3 $name, 4, "ROLLO ($name) stops from $state at pct $pct";
 
     #wenn autostop=1 und pct <> 0+100 und rollo fährt, dann kein stopbefehl ausführen...
-    if ( ( $state =~ /drive-/ && $pct >= 0 && $pct <= 100 ) || AttrVal( $name, "rl_autoStop", 0 ) ne 1 ) {
+    if ( ( $state =~ /drive-/ && $pct > 0 && $pct < 100 ) || AttrVal( $name, "rl_autoStop", 0 ) ne 1 ) {
         my $command = AttrVal( $name, 'rl_commandStop', "" );
-        $command = AttrVal( $name, 'rl_commandStopUp', "" ) if ( defined( $attr{$name}{rl_commandStopUp} ) );
+        $command = AttrVal( $name, 'rl_commandStopUp', "" ) if ( AttrVal( $name, 'rl_commandStopUp', "" ) ne "" );
         $command = AttrVal( $name, 'rl_commandStopDown', "" )
-          if ( defined( $attr{$name}{rl_commandStopDown} ) && $state eq "drive-down" );
+          if ( AttrVal( $name, 'rl_commandStopDown', "" ) ne "" && $state eq "drive-down" );
 
         # NUR WENN NICHT BEREITS EXTERN GESTOPPT
         if ( ReadingsVal( $name, "drive-type", "undef" ) ne "extern" ) {
-            fhem("$command") if ( $command ne "" );
+            AnalyzeCommandChain( undef, "$command" ) if ( $command ne "" );
             Log3 $name, 4, "ROLLO ($name) stopped by excuting the command: $command";
         }
         else {
@@ -636,8 +685,8 @@ sub ROLLO_calculateDesiredPosition(@) {
     my $start     = 0;
     my $dtime     = $hash->{driveTime};
     my $direction = $hash->{driveDir};
-	my $typ = AttrVal($name,"rl_type","normal");
-	Log3 $name, 4, "ROLLO ($name) drive $direction for $dtime";
+    my $typ       = AttrVal( $name, "rl_type", "normal" );
+    Log3 $name, 4, "ROLLO ($name) drive $direction for $dtime";
     my ( $time, $steps );
     if ( $direction eq "up" ) {
         $time = AttrVal( $name, 'rl_secondsUp', undef );
@@ -649,7 +698,7 @@ sub ROLLO_calculateDesiredPosition(@) {
     }
 
     my $startPos = ReadingsVal( $name, "pct", 100 );
-	$startPos = 100 - $startPos if ( $typ eq "HomeKit" );
+    $startPos = 100 - $startPos if ( $typ eq "HomeKit" );
 
     $time += AttrVal( $name, 'rl_reactionTime', 0 );
 
@@ -692,7 +741,13 @@ sub ROLLO_calculateDriveTime(@) {
         # Wenn force-Drive gesetzt ist fahren wir immer 100% (wenn "open" oder "closed")
         if ( AttrVal( $name, "rl_forceDrive", 0 ) == 1 && ( $oldpos == 0 || $oldpos == 100 ) ) {
             Log3 $name, 4, "ROLLO ($name): forceDrive set, driving $direction";
-            $steps = 100;
+            my $cmd = ReadingsVal( $name, "command", "stop" );
+            if ( $cmd eq "up" or $cmd eq "down" ) {
+                $steps = 10;
+            }
+            else {
+                $steps = 100;
+            }
         }
     }
 
@@ -702,6 +757,7 @@ sub ROLLO_calculateDriveTime(@) {
     }
 
     my $drivetime = $time * $steps / 100;
+    Log3 $name, 5, "ROLLO ($name) netto drive time = $drivetime";
 
     # reactionTime etc... sollten nur hinzugefügt werden, wenn auch gefahren wird...
     if ( $drivetime > 0 ) {
@@ -769,9 +825,9 @@ sub ROLLO_Attr(@) {
 'open:fts_shutter_10:closed closed:fts_shutter_100:open half:fts_shutter_50:closed drive-up:fts_shutter_up@red:stop drive-down:fts_shutter_down@red:stop pct-100:fts_shutter_10:open pct-90:fts_shutter_10:closed pct-80:fts_shutter_20:closed pct-70:fts_shutter_30:closed pct-60:fts_shutter_40:closed pct-50:fts_shutter_50:closed pct-40:fts_shutter_60:open pct-30:fts_shutter_70:open pct-20:fts_shutter_80:open pct-10:fts_shutter_90:open pct-0:fts_shutter_100:closed';
             my $iconAktuell = AttrVal( $name, "devStateIcon", "kein" );
 
-            fhem("attr $name devStateIcon $iconHomeKit")
+            CommandAttr( undef, " $name devStateIcon $iconHomeKit" )
               if ( ( $aVal eq "HomeKit" ) && ( ( $iconAktuell eq $iconNormal ) || ( $iconAktuell eq "kein" ) ) );
-            fhem("attr $name devStateIcon $iconNormal")
+            CommandAttr( undef, " $name devStateIcon $iconNormal" )
               if ( ( $aVal eq "normal" ) && ( ( $iconAktuell eq $iconHomeKit ) || ( $iconAktuell eq "kein" ) ) );
         }
         elsif ( $aName eq "disable" ) {
@@ -787,12 +843,12 @@ sub ROLLO_Attr(@) {
 
         }
     }
-	elsif ( $cmd eq "del" ) {
-		if ( $aName eq "disable" ) {
+    elsif ( $cmd eq "del" ) {
+        if ( $aName eq "disable" ) {
             readingsSingleUpdate( $hash, "state", "Initialized", 1 );
             $hash->{helper}{DISABLED} = 0;
-		}
-	}
+        }
+    }
     return undef;
 }
 
@@ -800,8 +856,8 @@ sub ROLLO_Attr(@) {
 
 =pod
 =item helper
-=item summary Universal module to precisely control shutters/blinds which support only open/close/stop
-=item summary_DE Universelles Modul um Rollladen die nur open/close/stop unterstützen päzise zu steuern
+=item summary Precisely control shutters/blinds which support only open/close/stop
+=item summary_DE Rollladen die nur open/close/stop unterstützen päzise steuern
 =begin html
 
 <a name="ROLLO"></a>
@@ -809,6 +865,8 @@ sub ROLLO_Attr(@) {
 <div>
 	<ul>The module ROLLO offers an easy away to control shutters with one or two relays and to stop them exactly. <br>
 	The current position (in %) will be displayed in fhem. It doesn't matter which hardware is used to control the shutters as long as they are working with FHEM. <br />
+	<h4>Note</h4>
+	If you had installed ROLLO before it became part of FHEM and you didn't update it for a long time, you might miss the "position" readings and the corresponding set command. "position" was replaced with "pct" to ensure compatibility with other modules (like <a href="https://fhem.de/commandref.html#AutoShuttersControl">Automatic shutter control - ASC</a>). Please adjust your notifies/DOIFs accordingly. 
 	<h4>Example</h4>
 		<code>define TestRollo ROLLO</code>
 		
@@ -937,10 +995,16 @@ sub ROLLO_Attr(@) {
 <div>
 	<ul>
 			<p>Das Modul ROLLO bietet eine einfache Moeglichkeit, mit ein bis zwei Relais den Hoch-/Runterlauf eines Rolladen zu steuern und punktgenau anzuhalten.<br>
-			Ausserdem wird die aktuelle Position in FHEM dargestellt. Ueber welche Hardware/Module die Ausgaenge angesprochen werden ist dabei egal.<br /><h4>Example</h4>
+			Ausserdem wird die aktuelle Position in FHEM dargestellt. Ueber welche Hardware/Module die Ausgaenge angesprochen werden ist dabei egal.<br />
+			<h4>Anmerkung</h4>
+			Wenn ROLLO installiert wurde, bevor es Bestandteil von FHEM wurde und lange kein Update gemacht wurde, wirst du die "position" readings und das entsprechende set Kommando vermissen. "position" wurde durch "pct" ersetzt, um Kompatibilität mit anderen Modulen (wie <a href="https://fhem.de/commandref_DE.html#AutoShuttersControl">Automatic shutter control - ASC</a>) sicher zu stellen. Bitte passe deine notifies/DOIFs entsprechend an.
+			
+			<h4>Example</h4>
 			<p>
 				<code>define TestRollo ROLLO</code>
 				<br />
+				
+			
 			</p><a name="ROLLO_Define"></a>
 			<h4>Define</h4>
 			<p>

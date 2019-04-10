@@ -1,6 +1,12 @@
+=====================================================
+ROLLO is now available via FHEM standard distribution
+=====================================================
 FHEM ROLLO last change:
-2018-07-21
- - Support for command "up" and "down" added
- - Direction calculation corrected
- - Current shutter position inside HomeKit corrected
-
+2018-01-15
+- fixed "external" commands - more to come
+2018-01-13
+- minor bugfixes
+2018-01-13
+- Made ROLLO compliant to FHEM coding guidelines
+- Renamed attributes
+- added disable
